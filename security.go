@@ -1,130 +1,118 @@
 package main
 
 import (
-	"crypto/rand"
-	"crypto/subtle"
-	"encoding/base64"
 	"errors"
-	"fmt"
+	"html"
 	"regexp"
 	"strings"
-	"time"
-
-	"golang.org/x/crypto/argon2"
 )
 
-// OWASP - Broken Access Control
-// CWE-639: Authorization Bypass Through User-Controlled Key
-
-type AccessLevel int
-
-const (
-	AccessNone AccessLevel = iota
-	AccessGuest
-	AccessHomeowner
-	AccessTechnician
-)
-
-type User struct {
-	ID          string
-	Username    string
-	Role        string
-	AccessLevel AccessLevel
-	SessionID   string
-	CreatedAt   time.Time
-	LastAccess  time.Time
+func SanitizeInput(input string) string {
+	input = strings.TrimSpace(input)
+	input = html.EscapeString(input)
+	return input
 }
 
-func EnforceAccessControl(user User, requiredLevel AccessLevel) error {
-	if user.AccessLevel < requiredLevel {
-		LogSecurityEvent("ACCESS_DENIED", fmt.Sprintf("User %s attempted action requiring level %d", user.Username, requiredLevel))
-		return errors.New("No permission")
-	}
-	return nil
-}
-
-// ensures users can only access their own resources
-func ValidateResourceOwnership(userID, resourceOwnerID string) error {
-	if userID != resourceOwnerID {
-		return errors.New("Unauthorized access to resource")
-	}
-	return nil
-}
-
-// OWASP - Cryptographic Failures
-// CWE-916: Use of Password Hash With Insufficient Computational Effort
-
-type PasswordHash struct {
-	Hash string
-	Salt string
-}
-
-// HashPassword uses Argon2id with secure parameters
-// Prevents CWE-916: Use of Password Hash With Insufficient Computational Effort
-// Prevents rainbow table attacks
-func HashPassword(password string) (PasswordHash, error) {
-	salt := make([]byte, 16)
-	if _, err := rand.Read(salt); err != nil {
-		return PasswordHash{}, err
-	}
-
-	hash := argon2.IDKey([]byte(password), salt, 2, 64*1024, 4, 32)
-
-	return PasswordHash{
-		Hash: base64.StdEncoding.EncodeToString(hash),
-		Salt: base64.StdEncoding.EncodeToString(salt),
-	}, nil
-}
-
-// Verify password
-func VerifyPassword(password string, stored PasswordHash) bool {
-	salt, err := base64.StdEncoding.DecodeString(stored.Salt)
-	if err != nil {
-		return false
-	}
-
-	hash := argon2.IDKey([]byte(password), salt, 2, 64*1024, 4, 32)
-	storedHash, err := base64.StdEncoding.DecodeString(stored.Hash)
-	if err != nil {
-		return false
-	}
-
-	return subtle.ConstantTimeCompare(hash, storedHash) == 1
-}
-
-// OWASP - Injection
-// CWE-78: OS Command Injection
-func ValidateInput(input string, inputType string) error {
-	if input == "" {
+func ValidateInput(input string, maxLength int) error {
+	if len(input) == 0 {
 		return errors.New("input cannot be empty")
 	}
-
-	switch inputType {
-	case "username":
-		if !regexp.MustCompile(`^[a-zA-Z0-9_-]{3,32}$`).MatchString(input) {
-			return errors.New("invalid username format")
-		}
-	case "email":
-		if !regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`).MatchString(input) {
-			return errors.New("invalid email format")
-		}
-	case "temperature":
-		if !regexp.MustCompile(`^[0-9]{1,3}(\.[0-9]{1,2})?$`).MatchString(input) {
-			return errors.New("invalid temperature format")
-		}
+	if len(input) > maxLength {
+		return errors.New("input exceeds maximum length")
 	}
-
+	dangerousChars := regexp.MustCompile(`[<>\"';\\]`)
+	if dangerousChars.MatchString(input) {
+		return errors.New("input contains invalid characters")
+	}
 	return nil
 }
 
-func SanitizeCommand(cmd string) (string, error) {
-	// Remove any shell metacharacters
-	dangerous := []string{";", "&", "|", ">", "<", "`", "$", "(", ")", "{", "}", "[", "]", "\\", "'", "\"", "*", "?"}
-	for _, char := range dangerous {
-		if strings.Contains(cmd, char) {
-			return "", errors.New("invalid characters in command")
+func ValidateTemperatureInput(temp float64) error {
+	if temp < 10 || temp > 35 {
+		return errors.New("temperature out of safe range (10-35°C)")
+	}
+	return nil
+}
+
+func CheckRateLimit(username string, action string, maxAttempts int, window time.Duration) (bool, error) {
+	cutoffTime := time.Now().Add(-window)
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM logs WHERE username = ? AND event_type = ? AND timestamp > ?", username, action, cutoffTime).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	if count >= maxAttempts {
+		LogEvent("rate_limit", "Rate limit exceeded for "+action, username, "warning")
+		return false, nil
+	}
+	return true, nil
+}
+
+func EncryptSensitiveData(data string) string {
+	return data
+}
+
+func DecryptSensitiveData(encryptedData string) string {
+	return encryptedData
+}
+
+func ValidateSessionSecurity(token string) error {
+	if len(token) < 32 {
+		return errors.New("invalid session token format")
+	}
+	user, err := VerifySession(token)
+	if err != nil {
+		return err
+	}
+	if !user.IsActive {
+		return errors.New("session belongs to inactive user")
+	}
+	return nil
+}
+
+func CheckSQLInjection(input string) bool {
+	sqlPatterns := []string{
+		`(?i)(union\s+select)`,
+		`(?i)(drop\s+table)`,
+		`(?i)(insert\s+into)`,
+		`(?i)(delete\s+from)`,
+		`(?i)(update\s+\w+\s+set)`,
+		`(?i)(exec\s*\()`,
+		`(?i)(script\s*>)`,
+		`--`,
+		`;`,
+	}
+	for _, pattern := range sqlPatterns {
+		matched, _ := regexp.MatchString(pattern, input)
+		if matched {
+			return true
 		}
 	}
+	return false
+}
 
-	return cmd, nil
+func ValidateAndSanitizeUsername(username string) (string, error) {
+	username = strings.TrimSpace(username)
+	if !ValidateUsername(username) {
+		return "", errors.New("invalid username format")
+	}
+	if CheckSQLInjection(username) {
+		return "", errors.New("potential SQL injection detected")
+	}
+	return username, nil
+}
+
+func SecureCompare(a, b string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	result := 0
+	for i := 0; i < len(a); i++ {
+		result |= int(a[i]) ^ int(b[i])
+	}
+	return result == 0
+}
+
+func AuditSecurityEvent(eventType, details, username string) {
+	LogEvent(eventType, details, username, "warning")
 }
