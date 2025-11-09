@@ -71,8 +71,9 @@ cd smart-thermostat-security
 2. **Install dependencies**:
 ```
 
-go mod download
-
+go get github.com/mattn/go-sqlite3
+go get golang.org/x/crypto/bcrypt
+go mod tidy
 ```
 
 3. **Build the application**:
@@ -88,7 +89,6 @@ go build -o thermostat
 ./thermostat
 
 ```
-
 ---
 
 ## Usage
