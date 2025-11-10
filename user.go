@@ -22,17 +22,41 @@ func CreateGuestAccount(homeowner, guestName, pin string) error {
 	return nil
 }
 
+func CreateTechnicianAccount(homeowner, techName, password string) error {
+    if len(techName) < 3 || len(password) < 4 {
+        return errors.New("technician name or password too short")
+    }
+    err := RegisterUser(techName, password, "technician")
+    if err != nil {
+        return err
+    }
+	expiresAt := time.Now()
+	_, err = db.Exec("INSERT INTO guest_access (guest_username, granted_by, expires_at) VALUES (?, ?, ?)", techName, homeowner, expiresAt)
+	if err != nil {
+		return err
+	}
+    LogEvent("create_technician", "Technician created: "+techName, homeowner, "info")
+    return nil
+}
+
 func GrantTechnicianAccess(homeowner, technician string, duration time.Duration) error {
 	tech, err := GetUserByUsername(technician)
 	if err != nil || tech.Role != "technician" {
 		return errors.New("invalid technician")
 	}
 	expiresAt := time.Now().Add(duration)
-	_, err = db.Exec("INSERT INTO guest_access (guest_username, granted_by, expires_at) VALUES (?, ?, ?)", technician, homeowner, expiresAt)
+
+	res, err := db.Exec(
+		"UPDATE guest_access SET expires_at = ?, is_active = 1 WHERE guest_username = ? AND granted_by = ?",
+		expiresAt, technician, homeowner,
+	)
 	if err != nil {
 		return err
 	}
-	LogEvent("grant_tech", "Tech access granted until "+expiresAt.Format(time.RFC3339), homeowner, "info")
+	if ra, _ := res.RowsAffected(); ra == 0 {
+		return errors.New("no existing grant found to update")
+	}
+	LogEvent("grant_tech", "Tech access extended until "+expiresAt.Format(time.RFC3339), homeowner, "info")
 	return nil
 }
 
