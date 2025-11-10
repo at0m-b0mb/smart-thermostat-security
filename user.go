@@ -10,7 +10,7 @@ func CreateGuestAccount(homeowner, guestName, pin string) error {
 		return errors.New("guest name or PIN too short")
 	}
 	guestUsername := homeowner + "_guest_" + guestName
-	err := RegisterUser(guestUsername, pin, "guest")
+	err := RegisterGuestUser(guestUsername, pin)
 	if err != nil {
 		return err
 	}
