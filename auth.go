@@ -15,6 +15,7 @@ const (
 	MinUsernameLen         = 3
 	MaxFailedLoginAttempts = 5
 	AccountLockDuration    = 15 * time.Minute
+		MinPinLen              = 4
 )
 
 type User struct {
@@ -59,6 +60,19 @@ func ValidatePassword(password string) error {
 	return nil
 }
 
+// ValidatePin validates a PIN for guest accounts (numeric, minimum 4 digits)
+func ValidatePin(pin string) error {
+	if len(pin) < MinPinLen {
+		return errors.New("PIN must be at least 4 digits")
+	}
+	// PIN should only contain digits
+	hasDigit := regexp.MustCompile(`^[0-9]+$`).MatchString(pin)
+	if !hasDigit {
+		return errors.New("PIN must contain only digits")
+	}
+	return nil
+}
+
 func RegisterUser(username, password, role string) error {
 	if len(username) < MinUsernameLen {
 		return errors.New("username too short")
@@ -81,6 +95,31 @@ func RegisterUser(username, password, role string) error {
 		return errors.New("user already exists")
 	}
 	LogEvent("register", "User registered", username, "info")
+	return nil
+}
+
+// RegisterGuestUser registers a guest with a PIN instead of a password
+func RegisterGuestUser(username, pin string) error {
+	if len(username) < MinUsernameLen {
+		return errors.New("username too short")
+	}
+	if !ValidateUsername(username) {
+		return errors.New("invalid username format")
+	}
+	// Validate PIN instead of password
+	if err := ValidatePin(pin); err != nil {
+		return err
+	}
+	// Hash the PIN using bcrypt (same as password)
+	pinHash, err := HashPassword(pin)
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)", username, pinHash, "guest")
+	if err != nil {
+		return errors.New("user already exists")
+	}
+	LogEvent("register", "Guest registered with PIN", username, "info")
 	return nil
 }
 
