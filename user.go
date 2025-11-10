@@ -30,7 +30,7 @@ func CreateTechnicianAccount(homeowner, techName, password string) error {
     if err != nil {
         return err
     }
-	expiresAt := time.Now()
+	expiresAt := "NULL"
 	_, err = db.Exec("INSERT INTO guest_access (guest_username, granted_by, expires_at) VALUES (?, ?, ?)", techName, homeowner, expiresAt)
 	if err != nil {
 		return err
