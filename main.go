@@ -345,8 +345,10 @@ func manageUsers(reader *bufio.Reader) {
 	fmt.Println("\n=== USER MANAGEMENT ===")
 	fmt.Println("1. List Users")
 	fmt.Println("2. Create Guest")
-	fmt.Println("3. Grant Technician Access")
-	fmt.Println("4. Revoke Access")
+	fmt.Println("3. Create Technician")
+	fmt.Println("4. Grant Technician Access")
+	fmt.Println("5. Revoke Access")
+	
 	fmt.Print("Choice: ")
 	choice, _ := reader.ReadString('\n')
 	choice = strings.TrimSpace(choice)
@@ -357,8 +359,10 @@ func manageUsers(reader *bufio.Reader) {
 	case "2":
 		createGuest(reader)
 	case "3":
-		grantTechAccess(reader)
+		createTechnician(reader) 
 	case "4":
+		grantTechAccess(reader)
+	case "5":
 		revokeUserAccess(reader)
 	}
 }
@@ -384,7 +388,7 @@ func createGuest(reader *bufio.Reader) {
 	name, _ := reader.ReadString('\n')
 	name = strings.TrimSpace(name)
 
-	fmt.Print("Guest PIN (min 4 digits): ")
+	fmt.Print("Guest password (min 8 chars): ")
 	pin, _ := reader.ReadString('\n')
 	pin = strings.TrimSpace(pin)
 
@@ -393,6 +397,20 @@ func createGuest(reader *bufio.Reader) {
 		return
 	}
 	fmt.Printf("Guest account created: %s_guest_%s\n", currentUser.Username, name)
+}
+
+func createTechnician(reader *bufio.Reader) {
+    fmt.Print("Technician name: ")
+    name, _ := reader.ReadString('\n')
+    name = strings.TrimSpace(name)
+    fmt.Print("Technician password (min 8 chars): ")
+    password, _ := reader.ReadString('\n')
+    password = strings.TrimSpace(password)
+    if err := CreateTechnicianAccount(currentUser.Username, name, password); err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    fmt.Printf("Technician account created: %s\n", name)
 }
 
 func grantTechAccess(reader *bufio.Reader) {
