@@ -388,7 +388,7 @@ func createGuest(reader *bufio.Reader) {
 	name, _ := reader.ReadString('\n')
 	name = strings.TrimSpace(name)
 
-	fmt.Print("Guest password (min 8 chars): ")
+	fmt.Print("Guest PIN (min 4): ")
 	pin, _ := reader.ReadString('\n')
 	pin = strings.TrimSpace(pin)
 
