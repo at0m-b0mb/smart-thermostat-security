@@ -100,6 +100,16 @@ func isAccountLocked(username string) (bool, error) {
 	return false, nil
 }
 
+func IsTechnicianAccessAllowed(db *sql.DB, username string) bool {
+    var expiresAt time.Time
+    err := db.QueryRow(
+        "SELECT expires_at FROM guest_access WHERE guest_username = ? AND expires_at > ? ORDER BY expires_at DESC LIMIT 1",
+        username, time.Now(),
+    ).Scan(&expiresAt)
+    // Access only allowed if there is a non-expired grant
+    return err == nil && time.Now().Before(expiresAt)
+}
+
 func incrementFailedLogin(username string) error {
 	var failedAttempts int
 	db.QueryRow("SELECT failed_login_attempts FROM users WHERE username = ?", username).Scan(&failedAttempts)
@@ -138,6 +148,10 @@ func AuthenticateUser(username, password string) (*User, error) {
 	if !user.IsActive {
 		LogEvent("auth_fail", "Account disabled", username, "warning")
 		return nil, errors.New("account disabled")
+	}
+	if user.Role == "technician" && !IsTechnicianAccessAllowed(db, user.Username) {
+		LogEvent("auth_fail", "Technician access expired or not granted", user.Username, "warning")
+		return nil, errors.New("technician access expired or not granted")
 	}
 	if !CheckPassword(user.PasswordHash, password) {
 		incrementFailedLogin(username)
