@@ -477,30 +477,57 @@ func viewAuditLogs() {
 }
 
 func changePasswordCLI(reader *bufio.Reader) {
-	fmt.Print("Current password: ")
-	oldPass, _ := reader.ReadString('\n')
-	oldPass = strings.TrimSpace(oldPass)
+	// Check if user is a guest - they use PINs, not passwords
+	if currentUser.Role == "guest" {
+		// Guest PIN change flow
+		fmt.Print("Current PIN: ")
+		oldPIN, _ := reader.ReadString('\n')
+		oldPIN = strings.TrimSpace(oldPIN)
 
-	fmt.Print("New password: ")
-	newPass, _ := reader.ReadString('\n')
-	newPass = strings.TrimSpace(newPass)
+		fmt.Print("New PIN (numeric, min 4 digits): ")
+		newPIN, _ := reader.ReadString('\n')
+		newPIN = strings.TrimSpace(newPIN)
 
-	fmt.Print("Confirm new password: ")
-	confirmPass, _ := reader.ReadString('\n')
-	confirmPass = strings.TrimSpace(confirmPass)
+		fmt.Print("Confirm new PIN: ")
+		confirmPIN, _ := reader.ReadString('\n')
+		confirmPIN = strings.TrimSpace(confirmPIN)
 
-	if newPass != confirmPass {
-		fmt.Println("Passwords do not match")
-		return
+		if newPIN != confirmPIN {
+			fmt.Println("PINs do not match")
+			return
+		}
+
+		if err := ChangePIN(currentUser.Username, oldPIN, newPIN); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return
+		}
+		fmt.Println("PIN changed successfully")
+	} else {
+		// Homeowner/Technician password change flow
+		fmt.Print("Current password: ")
+		oldPass, _ := reader.ReadString('\n')
+		oldPass = strings.TrimSpace(oldPass)
+
+		fmt.Print("New password: ")
+		newPass, _ := reader.ReadString('\n')
+		newPass = strings.TrimSpace(newPass)
+
+		fmt.Print("Confirm new password: ")
+		confirmPass, _ := reader.ReadString('\n')
+		confirmPass = strings.TrimSpace(confirmPass)
+
+		if newPass != confirmPass {
+			fmt.Println("Passwords do not match")
+			return
+		}
+
+		if err := ChangePassword(currentUser.Username, oldPass, newPass); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return
+		}
+		fmt.Println("Password changed successfully")
 	}
-
-	if err := ChangePassword(currentUser.Username, oldPass, newPass); err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return
-	}
-	fmt.Println("Password changed successfully")
 }
-
 func logout() {
 	if currentUser != nil {
 		LogoutUser(currentUser.Username)
