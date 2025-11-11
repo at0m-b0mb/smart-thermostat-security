@@ -264,41 +264,60 @@ func viewEnergyUsage(reader *bufio.Reader) {
 	fmt.Println("\n" + GenerateEnergyReport(stats))
 }
 
-func manageProfiles(reader *bufio.Reader) {
-	fmt.Println("\n=== PROFILE MANAGEMENT ===")
-	fmt.Println("1. List Profiles")
-	fmt.Println("2. Create Profile")
-	fmt.Println("3. Apply Profile")
-	fmt.Println("4. Delete Profile")
-	fmt.Println("5. Add Schedule")
-	fmt.Println("6. View Schedules")
-	fmt.Print("Choice: ")
-	choice, _ := reader.ReadString('\n')
-	choice = strings.TrimSpace(choice)
+func manageProfiles(reader *bufio.Reader, currentUser *User) {
+    for {
+        fmt.Println("\n=== PROFILE MANAGEMENT ===")
+        fmt.Println("1. List Profiles")
+        fmt.Println("2. Apply Profile")
 
-	switch choice {
-	case "1":
-		profiles, err := ListProfiles(currentUser.Username, currentUser)
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			return
-		}
-		fmt.Println("\nYour Profiles:")
-		for _, p := range profiles {
-			fmt.Printf("- %s (Temp: %.1f°C, Mode: %s)\n", p.Name, p.TargetTemp, p.HVACMode)
-		}
-	case "2":
-		createProfile(reader)
-	case "3":
-		applyProfile(reader)
-	case "4":
-		deleteProfile(reader)
-	case "5":
-    	addScheduleCLI(reader)
-	case "6":
-    	viewSchedulesCLI(reader)
-	}
+        // Only homeowners and technicians can create/delete profiles or add schedules
+        if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
+            fmt.Println("3. Create Profile")
+            fmt.Println("4. Delete Profile")
+            fmt.Println("5. Add Schedule")
+        }
+
+        // All roles can view schedules
+        fmt.Println("6. View Schedules")
+        fmt.Println("0. Back to Main Menu")
+        fmt.Print("Enter choice: ")
+
+        choice, _ := reader.ReadString('\n')
+        choice = strings.TrimSpace(choice)
+
+        switch choice {
+        case "1":
+            listProfilesCLI(reader, currentUser)
+        case "2":
+            applyProfileCLI(reader, currentUser)
+        case "3":
+            if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
+                fmt.Println("Only homeowners or technicians can create profiles")
+                continue
+            }
+            createProfileCLI(reader, currentUser)
+        case "4":
+            if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
+                fmt.Println("Only homeowners or technicians can delete profiles")
+                continue
+            }
+            deleteProfileCLI(reader, currentUser)
+        case "5":
+            if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
+                fmt.Println("Only homeowners or technicians can add schedules")
+                continue
+            }
+            addScheduleCLI(reader, currentUser)
+        case "6":
+            viewSchedulesCLI(reader, currentUser)
+        case "0":
+            return
+        default:
+            fmt.Println("Invalid choice")
+        }
+    }
 }
+
 
 func createProfile(reader *bufio.Reader) {
     fmt.Print("Profile name: ")
