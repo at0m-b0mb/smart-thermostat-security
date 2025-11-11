@@ -27,6 +27,7 @@ func InitializeDatabase() error {
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		last_login DATETIME,
 		session_token TEXT,
+		session_expires_at DATETIME,
 		is_active INTEGER DEFAULT 1,
 		failed_login_attempts INTEGER DEFAULT 0,
 		locked_until DATETIME
@@ -155,4 +156,16 @@ func CleanOldLogs(daysToKeep int) error {
 	cutoffDate := time.Now().AddDate(0, 0, -daysToKeep)
 	_, err := db.Exec("DELETE FROM logs WHERE timestamp < ?", cutoffDate)
 	return err
+}
+
+func CleanExpiredSessions() error {
+	result, err := db.Exec("UPDATE users SET session_token = NULL, session_expires_at = NULL WHERE session_expires_at < ?", time.Now())
+	if err != nil {
+		return err
+	}
+	rows, _ := result.RowsAffected()
+	if rows > 0 {
+		LogEvent("session_cleanup", fmt.Sprintf("Cleaned up %d expired sessions", rows), "system", "info")
+	}
+	return nil
 }

@@ -44,6 +44,7 @@ func main() {
 	// Start background tasks
 	go hvacControlLoop()
 	go sensorMonitorLoop()
+	go sessionCleanupLoop()
 
 	// Main CLI loop
 	runCLI()
@@ -76,6 +77,16 @@ func sensorMonitorLoop() {
 	for range ticker.C {
 		if _, err := ReadAllSensors(); err != nil {
 			LogEvent("sensor_error", "Sensor read failed: "+err.Error(), "system", "warning")
+		}
+	}
+}
+
+func sessionCleanupLoop() {
+	ticker := time.NewTicker(15 * time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		if err := CleanExpiredSessions(); err != nil {
+			LogEvent("cleanup_error", "Session cleanup failed: "+err.Error(), "system", "warning")
 		}
 	}
 }
