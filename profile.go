@@ -151,24 +151,24 @@ func AddSchedule(profileID, dayOfWeek int, startTime, endTime string, targetTemp
 
 
 func GetSchedules(profileID int, user *User) ([]Schedule, error) {
-    // Only homeowners and technicians (and maybe certain guests) can view schedules
     if user.Role != "homeowner" && user.Role != "technician" {
-        if !(user.Role == "guest" && user.GuestAccessible) {
-            return nil, errors.New("permission denied: you cannot view schedules")
-        }
+        return nil, errors.New("permission denied")
     }
-	
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	schedules := []Schedule{}
-	for rows.Next() {
-		var s Schedule
-		if err := rows.Scan(&s.ID, &s.ProfileID, &s.DayOfWeek, &s.StartTime, &s.EndTime, &s.TargetTemp); err != nil {
-			continue
-		}
-		schedules = append(schedules, s)
-	}
-	return schedules, nil
+    rows, err := db.Query("SELECT day_of_week, start_time, end_time, target_temp FROM schedules WHERE profile_id = ?", profileID)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    var schedules []Schedule
+    for rows.Next() {
+        var s Schedule
+        err := rows.Scan(&s.DayOfWeek, &s.StartTime, &s.EndTime, &s.TargetTemp)
+        if err != nil {
+            return nil, err
+        }
+        schedules = append(schedules, s)
+    }
+    return schedules, nil
 }
+
