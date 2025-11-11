@@ -87,26 +87,75 @@ func ListAllUsers() ([]User, error) {
 	return users, nil
 }
 
+// ChangePassword changes the password for homeowners and technicians
+// Guests CANNOT use this function - they must use ChangePIN instead
 func ChangePassword(username, oldPassword, newPassword string) error {
 	var passwordHash string
-	err := db.QueryRow("SELECT password_hash FROM users WHERE username = ?", username).Scan(&passwordHash)
+	var role string
+	err := db.QueryRow("SELECT password_hash, role FROM users WHERE username = ?", username).Scan(&passwordHash, &role)
 	if err != nil {
 		return err
 	}
+
+	// Security check: prevent guests from changing passwords
+	if role == "guest" {
+		return errors.New("guests cannot change passwords, use ChangePIN instead")
+	}
+
 	if !CheckPassword(passwordHash, oldPassword) {
 		return errors.New("incorrect old password")
 	}
+
 	if err := ValidatePassword(newPassword); err != nil {
 		return err
 	}
+
 	newHash, err := HashPassword(newPassword)
 	if err != nil {
 		return err
 	}
+
 	_, err = db.Exec("UPDATE users SET password_hash = ? WHERE username = ?", newHash, username)
 	if err != nil {
 		return err
 	}
+
 	LogEvent("password_change", "Password changed", username, "info")
 	return nil
 }
+
+// ChangePIN changes the PIN for guest accounts only
+func ChangePIN(username, oldPIN, newPIN string) error {
+	var passwordHash string
+	var role string
+	err := db.QueryRow("SELECT password_hash, role FROM users WHERE username = ?", username).Scan(&passwordHash, &role)
+	if err != nil {
+		return err
+	}
+
+	// Security check: only guests can change PINs
+	if role != "guest" {
+		return errors.New("only guests can change PINs, use ChangePassword instead")
+	}
+
+	if !CheckPassword(passwordHash, oldPIN) {
+		return errors.New("incorrect old PIN")
+	}
+
+	// Validate PIN format (must be numeric, minimum 4 digits)
+	if err := ValidatePin(newPIN); err != nil {
+		return err
+	}
+
+	newHash, err := HashPassword(newPIN)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec("UPDATE users SET password_hash = ? WHERE username = ?", newHash, username)
+	if err != nil {
+		return err
+	}
+
+	LogEvent("pin_change", "PIN changed", username, "info")
+	return nil
