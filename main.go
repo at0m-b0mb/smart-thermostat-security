@@ -366,6 +366,11 @@ func manageProfiles(reader *bufio.Reader, currentUser *User) {
 }
 
 func listProfiles(reader *bufio.Reader) {
+	profiles, err := ListProfiles(currentUser.Username, currentUser)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
 	fmt.Println("Name    | Temp (°C) | Mode | Guest Accessible")
 	fmt.Println("-----------------------------------------------")
 	for _, p := range profiles {
