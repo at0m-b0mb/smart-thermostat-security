@@ -524,7 +524,7 @@ func createGuest(reader *bufio.Reader) {
 	pin, _ := reader.ReadString('\n')
 	pin = strings.TrimSpace(pin)
 
-	if err := CreateGuestAccount(currentUser.Username, name, pin); err != nil {
+	if err := CreateGuestAccount(currentUser.Username, name, pin, currentUser.Role); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
@@ -538,7 +538,7 @@ func createTechnician(reader *bufio.Reader) {
     fmt.Print("Technician password (min 8 chars): ")
     password, _ := reader.ReadString('\n')
     password = strings.TrimSpace(password)
-    if err := CreateTechnicianAccount(currentUser.Username, name, password); err != nil {
+    if err := CreateTechnicianAccount(currentUser.Username, name, password, currentUser.Role); err != nil {
         fmt.Printf("Error: %v\n", err)
         return
     }
@@ -558,7 +558,7 @@ func grantTechAccess(reader *bufio.Reader) {
 		return
 	}
 
-	if err := GrantTechnicianAccess(currentUser.Username, tech, time.Duration(hours)*time.Hour); err != nil {
+	if err := GrantTechnicianAccess(currentUser.Username, tech, time.Duration(hours)*time.Hour, currentUser.Role); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
@@ -570,7 +570,7 @@ func revokeUserAccess(reader *bufio.Reader) {
 	username, _ := reader.ReadString('\n')
 	username = strings.TrimSpace(username)
 
-	if err := RevokeAccess(username); err != nil {
+	if err := RevokeAccess(username, currentUser.Username, currentUser.Role); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
