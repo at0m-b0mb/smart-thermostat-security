@@ -159,3 +159,4 @@ func ChangePIN(username, oldPIN, newPIN string) error {
 
 	LogEvent("pin_change", "PIN changed", username, "info")
 	return nil
+	}
