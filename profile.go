@@ -26,8 +26,11 @@ type Schedule struct {
 	TargetTemp float64
 }
 
-func CreateProfile(profileName string, targetTemp float64, hvacMode, owner string, guestAccessible int) error {
-    if len(profileName) < 2 || len(profileName) > 50 {
+func CreateProfile(profileName string, targetTemp float64, hvacMode, owner string, user *User, guestAccessible int) error {
+	if user.Role != "homeowner" && user.Role != "technician" {
+	return errors.New("only homeowners or technicians can create a profile")
+	}
+	if len(profileName) < 2 || len(profileName) > 50 {
         return errors.New("invalid profile name length")
     }
     if targetTemp < 10 || targetTemp > 35 {
