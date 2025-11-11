@@ -126,15 +126,18 @@ func ApplyProfile(profileName string, user *User) error {
     return nil
 }
 
-func DeleteProfile(profileName, owner string) error {
-	result, err := db.Exec("DELETE FROM profiles WHERE profile_name = ? AND owner = ?", profileName, owner)
-	if err != nil {
-		return err
-	}
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		return errors.New("cannot delete this profile or unauthorized")
-	}
+func DeleteProfile(profileName, user string, role string) error {
+    var result sql.Result
+    var err error
+    if role == "homeowner" || role == "admin" {
+        // Homeowner or admin: delete any profile matches
+        result, err = db.Exec("DELETE FROM profiles WHERE profile_name = ?", profileName)
+    } else if role == "technician" {
+        // Technician: delete if guest_accessible = 1
+        result, err = db.Exec("DELETE FROM profiles WHERE profile_name = ? AND guest_accessible = 1", profileName)
+    } else {
+        return errors.New("unauthorized")
+    }
 	LogEvent("profile_delete", "Profile deleted: "+profileName, owner, "info")
 	return nil
 }
