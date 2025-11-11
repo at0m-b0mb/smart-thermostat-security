@@ -88,18 +88,24 @@ func ListAllUsers() ([]User, error) {
 }
 
 func ChangePassword(username, oldPassword, newPassword string) error {
-	var passwordHash string
-	err := db.QueryRow("SELECT password_hash FROM users WHERE username = ?", username).Scan(&passwordHash)
+	var passwordHash, role string	err := db.QueryRow("SELECT password_hash, role FROM users WHERE username = ?", username).Scan(&passwordHash, &role)
 	if err != nil {
 		return err
 	}
 	if !CheckPassword(passwordHash, oldPassword) {
 		return errors.New("incorrect old password")
 	}
-	if err := ValidatePassword(newPassword); err != nil {
-		return err
-	}
-	newHash, err := HashPassword(newPassword)
+	if role == "guest" {
+		// For guests, enforce PIN validation instead of password
+		if err := ValidatePin(newPassword); err != nil {
+			return err
+		}
+	} else {
+		// For homeowners/technicians, enforce password rules
+		if err := ValidatePassword(newPassword); err != nil {
+			return err
+		}
+	}	newHash, err := HashPassword(newPassword)
 	if err != nil {
 		return err
 	}
