@@ -276,7 +276,7 @@ func manageProfiles(reader *bufio.Reader) {
 
 	switch choice {
 	case "1":
-		profiles, err := ListProfiles(currentUser.Username)
+		profiles, err := ListProfiles(currentUser.Username, currentUser)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			return
