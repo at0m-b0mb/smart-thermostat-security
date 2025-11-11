@@ -15,49 +15,10 @@ type DiagnosticReport struct {
 	Warnings      []string
 }
 
-// Role-based access control for diagnostics
 func RunSystemDiagnostics(user *User) (DiagnosticReport, error) {
     if user.Role != "homeowner" && user.Role != "technician" {
-        return DiagnosticReport{}, errors.New("access denied: only homeowner or technician can run diagnostics")
+        return DiagnosticReport{}, errors.New("access denied: only homeowners or technicians can run diagnostics")
     }
-    // Start system diagnostics
-    LogEvent("diagnostics_start", "System diagnostics initiated", "system", "info")
-    report := DiagnosticReport{
-        Timestamp: time.Now(),
-        SystemHealth: "Unknown",
-        NetworkStatus: true,
-        Errors: []string{},
-        Warnings: []string{},
-    }
-    sensorStatus := GetSensorStatus()
-    report.SensorStatus = sensorStatus
-    if !sensorStatus.IsHealthy {
-        report.Errors = append(report.Errors, "Sensor system unhealthy")
-    }
-    if sensorStatus.ErrorCount > 0 {
-        report.Warnings = append(report.Warnings, fmt.Sprintf("Sensor errors: %d", sensorStatus.ErrorCount))
-    }
-    _, err := ReadTemperature()
-    if err != nil {
-        report.Errors = append(report.Errors, "Temperature sensor failed to read")
-    }
-    if !testNetworkConnectivity() {
-        report.NetworkStatus = false
-        report.Errors = append(report.Errors, "Network connectivity failed")
-    }
-	errHealth := CheckSensorHealth()
-	if errHealth != nil {
-	    report.SystemHealth = "Unhealthy"
-	    report.Errors = append(report.Errors, errHealth.Error())
-	} else {
-	    report.SystemHealth = "Healthy"
-	}
-    LogEvent("diagnostics_complete", "System diagnostics completed", "system", "info")
-    return report, nil
-}
-
-// (Keep all other existing functions unchanged)
-func RunSystemDiagnostics() (DiagnosticReport, error) {
 	LogEvent("diagnostics_start", "System diagnostics initiated", "system", "info")
 	report := DiagnosticReport{
 		Timestamp:     time.Now(),
