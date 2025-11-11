@@ -133,7 +133,7 @@ func DeleteProfile(profileName, owner string) error {
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		return errors.New("cannot apply this profile or unauthorized")
+		return errors.New("cannot delete this profile or unauthorized")
 	}
 	LogEvent("profile_delete", "Profile deleted: "+profileName, owner, "info")
 	return nil
