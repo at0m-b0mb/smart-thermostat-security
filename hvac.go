@@ -47,6 +47,9 @@ func InitializeHVAC() error {
 func SetHVACMode(mode string, user *User) error {
     hvacMutex.Lock()
     defer hvacMutex.Unlock()
+    
+	// Sanitize mode input
+	mode = SanitizeInput(mode)
     // --- Guest restriction removed ---
     hvacMode := HVACMode(mode)
     if hvacMode != ModeOff && hvacMode != ModeHeat && hvacMode != ModeCool && hvacMode != ModeFan {
@@ -67,10 +70,11 @@ func SetHVACMode(mode string, user *User) error {
 func SetTargetTemperature(temp float64, user *User) error {
     hvacMutex.Lock()
     defer hvacMutex.Unlock()
-    if temp < 10 || temp > 35 {
-        return errors.New("temperature out of valid range (10-35°C)")
-    }
-    oldTemp := hvacState.TargetTemp
+	// Validate temperature using security.go function
+	if err := ValidateTemperatureInput(temp); err != nil {
+		AuditSecurityEvent("invalid_temp", fmt.Sprintf("Invalid temperature attempted: %.1f", temp), user.Username)
+		return err
+	}    oldTemp := hvacState.TargetTemp
     hvacState.TargetTemp = temp
     hvacState.LastUpdate = time.Now()
     db.Exec("INSERT INTO hvac_state (mode, target_temp, current_temp, is_running) VALUES (?, ?, ?, ?)",
