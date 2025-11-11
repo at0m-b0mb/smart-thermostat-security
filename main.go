@@ -167,7 +167,7 @@ func handleMenuChoice(choice string, reader *bufio.Reader) {
         if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
             viewEnergyUsage(reader)
         } else if currentUser.Role == "guest" {
-            manageUsers(reader)
+            manageProfiles(reader, currentUser)
         } else {
             fmt.Println("Invalid choice")
         }
