@@ -183,6 +183,12 @@ func setTargetTemperature(reader *bufio.Reader) {
 		fmt.Println("Invalid temperature")
 		return
 	}
+		
+	// Validate temperature using security.go function
+	if err := ValidateTemperatureInput(temp); err != nil {
+		fmt.Printf("Security validation failed: %v\n", err)
+		return
+	}
 	if err := SetTargetTemperature(temp, currentUser); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
