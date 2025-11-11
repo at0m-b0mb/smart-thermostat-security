@@ -74,7 +74,8 @@ func SetTargetTemperature(temp float64, user *User) error {
 	if err := ValidateTemperatureInput(temp); err != nil {
 		AuditSecurityEvent("invalid_temp", fmt.Sprintf("Invalid temperature attempted: %.1f", temp), user.Username)
 		return err
-	}    oldTemp := hvacState.TargetTemp
+	}    
+	oldTemp := hvacState.TargetTemp
     hvacState.TargetTemp = temp
     hvacState.LastUpdate = time.Now()
     db.Exec("INSERT INTO hvac_state (mode, target_temp, current_temp, is_running) VALUES (?, ?, ?, ?)",
