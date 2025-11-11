@@ -322,7 +322,7 @@ func createProfile(reader *bufio.Reader) {
     }
 
     // Call CreateProfile with the new parameter
-    if err := CreateProfile(name, temp, mode, currentUser.Username, guestAccessible); err != nil {
+    if err := CreateProfile(name, temp, mode, currentUser.Username, currentUser, guestAccessible); err != nil {
         fmt.Printf("Error: %v\n", err)
         return
     }
