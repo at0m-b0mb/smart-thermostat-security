@@ -47,7 +47,7 @@ func InitializeHVAC() error {
 func SetHVACMode(mode string, user *User) error {
     hvacMutex.Lock()
     defer hvacMutex.Unlock()
-    // --- No guest restriction ---
+    // --- Guest restriction removed ---
     hvacMode := HVACMode(mode)
     if hvacMode != ModeOff && hvacMode != ModeHeat && hvacMode != ModeCool && hvacMode != ModeFan {
         return errors.New("invalid HVAC mode")
@@ -67,10 +67,6 @@ func SetHVACMode(mode string, user *User) error {
 func SetTargetTemperature(temp float64, user *User) error {
     hvacMutex.Lock()
     defer hvacMutex.Unlock()
-    // --- Restrict guest users ---
-    if user.Role == "guest" {
-        return errors.New("guests cannot change target temperature")
-    }
     if temp < 10 || temp > 35 {
         return errors.New("temperature out of valid range (10-35°C)")
     }
@@ -157,4 +153,3 @@ func estimateEnergyUsage(mode HVACMode, runtimeMinutes int) float64 {
     }
     return kwhPerHour * (float64(runtimeMinutes) / 60.0)
 }
-
