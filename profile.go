@@ -13,6 +13,7 @@ type Profile struct {
 	HVACMode   string
 	Owner      string
 	CreatedAt  time.Time
+	GuestAccessible int   
 }
 
 type Schedule struct {
@@ -51,16 +52,26 @@ func GetProfile(profileName string) (*Profile, error) {
 	return &profile, nil
 }
 
-func ListProfiles(owner string) ([]Profile, error) {
-	rows, err := db.Query("SELECT id, profile_name, target_temp, hvac_mode, owner, created_at FROM profiles WHERE owner = ?", owner)
+func ListProfiles(owner string, user *User) ([]Profile, error) {
+	var rows *sql.Rows
+	var err error
+
+	if user.Role == "guest" {
+		// Guests: only see guest-accessible profiles (regardless of owner)
+		rows, err = db.Query("SELECT id, profile_name, target_temp, hvac_mode, owner, guest_accessible, created_at FROM profiles WHERE guest_accessible = 1")
+	} else {
+		// Non-guests: see all profiles created by owner
+		rows, err = db.Query("SELECT id, profile_name, target_temp, hvac_mode, owner, guest_accessible, created_at FROM profiles WHERE owner = ?", owner)
+	}
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+
 	profiles := []Profile{}
 	for rows.Next() {
 		var p Profile
-		if err := rows.Scan(&p.ID, &p.Name, &p.TargetTemp, &p.HVACMode, &p.Owner, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.TargetTemp, &p.HVACMode, &p.Owner, &p.GuestAccessible, &p.CreatedAt); err != nil {
 			continue
 		}
 		profiles = append(profiles, p)
@@ -68,14 +79,19 @@ func ListProfiles(owner string) ([]Profile, error) {
 	return profiles, nil
 }
 
+
 func ApplyProfile(profileName string, user *User) error {
 	profile, err := GetProfile(profileName)
 	if err != nil {
 		return err
 	}
-	if user.Role == "guest" && profile.Owner != user.Username {
-		return errors.New("guests can only apply their own profiles")
+	// Only allow guests to apply profiles where guest_accessible == 1
+	if user.Role == "guest" {
+		if profile.GuestAccessible != 1 {
+			return errors.New("guests may only apply profiles marked accessible to guests")
+		}
 	}
+	
 	err = SetHVACMode(profile.HVACMode, user)
 	if err != nil {
 		return err
@@ -87,6 +103,7 @@ func ApplyProfile(profileName string, user *User) error {
 	LogEvent("profile_apply", "Profile applied: "+profileName, user.Username, "info")
 	return nil
 }
+
 
 func DeleteProfile(profileName, owner string) error {
 	result, err := db.Exec("DELETE FROM profiles WHERE profile_name = ? AND owner = ?", profileName, owner)
