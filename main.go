@@ -273,8 +273,9 @@ func manageProfiles(reader *bufio.Reader, currentUser *User) {
             fmt.Println("3. Create Profile")
             fmt.Println("4. Delete Profile")
             fmt.Println("5. Add Schedule")
+			fmt.Println("6. View Schedules")
+
         }
-        fmt.Println("6. View Schedules")
         fmt.Println("0. Back to Main Menu")
         fmt.Print("Enter choice: ")
 
@@ -305,6 +306,10 @@ func manageProfiles(reader *bufio.Reader, currentUser *User) {
             }
             addSchedule(reader)
         case "6":
+            if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
+                fmt.Println("Only homeowners or technicians can add schedules")
+                continue
+            }
             viewSchedules(reader)
         case "0":
             return
