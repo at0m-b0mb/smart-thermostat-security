@@ -459,6 +459,7 @@ func manageUsers(reader *bufio.Reader) {
         // Only show "List All Users" to homeowners
         if currentUser.Role == "homeowner" {
             fmt.Println("5. List All Users")
+			fmt.Println("6. Permanently Delete User")
         }
         
         fmt.Println("0. Back to Main Menu")
@@ -569,7 +570,14 @@ func manageUsers(reader *bufio.Reader) {
                 }
                 fmt.Printf("ID: %d | Username: %s | Role: %s | Status: %s\n", u.ID, u.Username, u.Role, status)
             }
-            
+
+		case "6":
+			// List all users - only homeowners
+            if currentUser.Role != "homeowner" {
+                fmt.Println("Invalid choice")
+                continue
+            }
+			deleteUser(reader)
         case "0":
             return
             
@@ -660,6 +668,19 @@ func revokeUserAccess(reader *bufio.Reader) {
 	}
 	fmt.Printf("Access revoked for %s\n", username)
 }
+
+func deleteUser(reader *bufio.Reader) {
+    fmt.Print("Username to permanently delete: ")
+    username, _ := reader.ReadString('\n')
+    username = strings.TrimSpace(username)
+    err := DeleteUser(currentUser.Username, username, currentUser.Role)
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    fmt.Printf("User %s permanently deleted.\n", username)
+}
+
 
 func runDiagnostics() {
 	fmt.Println("\n=== RUNNING SYSTEM DIAGNOSTICS ===")
