@@ -144,7 +144,7 @@ func handleMenuChoice(choice string, reader *bufio.Reader) {
 	case "6":
 		viewEnergyUsage(reader)
 	case "7":
-		manageProfiles(reader)
+		manageProfiles(reader, currentUser)
 	case "8":
 		manageUsers(reader)
 	case "9":
@@ -269,15 +269,11 @@ func manageProfiles(reader *bufio.Reader, currentUser *User) {
         fmt.Println("\n=== PROFILE MANAGEMENT ===")
         fmt.Println("1. List Profiles")
         fmt.Println("2. Apply Profile")
-
-        // Only homeowners and technicians can create/delete profiles or add schedules
         if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
             fmt.Println("3. Create Profile")
             fmt.Println("4. Delete Profile")
             fmt.Println("5. Add Schedule")
         }
-
-        // All roles can view schedules
         fmt.Println("6. View Schedules")
         fmt.Println("0. Back to Main Menu")
         fmt.Print("Enter choice: ")
@@ -307,9 +303,9 @@ func manageProfiles(reader *bufio.Reader, currentUser *User) {
                 fmt.Println("Only homeowners or technicians can add schedules")
                 continue
             }
-            addScheduleCLI(reader, currentUser)
+            addScheduleCLI(reader)
         case "6":
-            viewSchedulesCLI(reader, currentUser)
+            viewSchedulesCLI(reader)
         case "0":
             return
         default:
@@ -317,7 +313,6 @@ func manageProfiles(reader *bufio.Reader, currentUser *User) {
         }
     }
 }
-
 
 func createProfile(reader *bufio.Reader) {
     fmt.Print("Profile name: ")
