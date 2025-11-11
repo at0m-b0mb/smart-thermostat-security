@@ -270,6 +270,8 @@ func manageProfiles(reader *bufio.Reader) {
 	fmt.Println("2. Create Profile")
 	fmt.Println("3. Apply Profile")
 	fmt.Println("4. Delete Profile")
+	fmt.Println("5. Add Schedule")
+	fmt.Println("6. View Schedules")
 	fmt.Print("Choice: ")
 	choice, _ := reader.ReadString('\n')
 	choice = strings.TrimSpace(choice)
@@ -291,6 +293,10 @@ func manageProfiles(reader *bufio.Reader) {
 		applyProfile(reader)
 	case "4":
 		deleteProfile(reader)
+	case "5":
+    	addScheduleCLI(reader)
+	case "6":
+    	viewSchedulesCLI(reader)
 	}
 }
 
@@ -353,6 +359,53 @@ func deleteProfile(reader *bufio.Reader) {
 	}
 	fmt.Println("Profile deleted successfully")
 }
+
+func addScheduleCLI(reader *bufio.Reader) {
+    fmt.Print("Profile ID: ")
+    profileIDStr, _ := reader.ReadString('\n')
+    profileID, _ := strconv.Atoi(strings.TrimSpace(profileIDStr))
+    fmt.Print("Day of Week (0=Sun, 6=Sat): ")
+    dayStr, _ := reader.ReadString('\n')
+    dayOfWeek, _ := strconv.Atoi(strings.TrimSpace(dayStr))
+    fmt.Print("Start Time (HH:MM): ")
+    startTime, _ := reader.ReadString('\n')
+    startTime = strings.TrimSpace(startTime)
+    fmt.Print("End Time (HH:MM): ")
+    endTime, _ := reader.ReadString('\n')
+    endTime = strings.TrimSpace(endTime)
+    fmt.Print("Target Temperature (Celsius): ")
+    targetStr, _ := reader.ReadString('\n')
+    targetTemp, _ := strconv.ParseFloat(strings.TrimSpace(targetStr), 64)
+
+    err := AddSchedule(profileID, dayOfWeek, startTime, endTime, targetTemp, currentUser)
+    if err != nil {
+        fmt.Printf("Error adding schedule: %v\n", err)
+    } else {
+        fmt.Println("Schedule added successfully.")
+    }
+}
+
+func viewSchedulesCLI(reader *bufio.Reader) {
+    fmt.Print("Profile ID: ")
+    profileIDStr, _ := reader.ReadString('\n')
+    profileID, _ := strconv.Atoi(strings.TrimSpace(profileIDStr))
+
+    schedules, err := GetSchedules(profileID, currentUser)
+    if err != nil {
+        fmt.Printf("Error retrieving schedules: %v\n", err)
+        return
+    }
+    if len(schedules) == 0 {
+        fmt.Println("No schedules found for this profile.")
+        return
+    }
+    fmt.Println("Schedules for this profile:")
+    for _, s := range schedules {
+        fmt.Printf("Day %d: %s - %s, Target: %.1f°C\n", s.DayOfWeek, s.StartTime, s.EndTime, s.TargetTemp)
+    }
+}
+
+
 
 func manageUsers(reader *bufio.Reader) {
     if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
