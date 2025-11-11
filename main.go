@@ -256,7 +256,7 @@ func viewEnergyUsage(reader *bufio.Reader) {
 			days = d
 		}
 	}
-	stats, err := GetEnergyUsage(currentUser, days)
+	stats, err := GetEnergyUsage(days)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
