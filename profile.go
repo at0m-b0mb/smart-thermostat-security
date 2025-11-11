@@ -129,12 +129,9 @@ func ApplyProfile(profileName string, user *User) error {
 func DeleteProfile(profileName, username, role string) error {
     var result sql.Result
     var err error
-    if role == "admin" {
-        // Admin: delete ANY profile (no username check)
+    if role == "homeowner" {
+        // Admin/Homeowner: delete ANY profile (no username check)
         result, err = db.Exec("DELETE FROM profiles WHERE profile_name = ?", profileName)
-    } else if role == "homeowner" {
-        // Homeowner: only delete their own
-        result, err = db.Exec("DELETE FROM profiles WHERE profile_name = ? AND owner = ?", profileName, username)
     } else if role == "technician" {
         // Technician: delete their own OR guest-accessible
         result, err = db.Exec("DELETE FROM profiles WHERE profile_name = ? AND (owner = ? OR guest_accessible = 1)", profileName, username)
