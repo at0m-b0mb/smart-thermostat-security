@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
@@ -17,7 +18,7 @@ type EnergyStats struct {
 
 func GetEnergyUsage(user *User, days int) (EnergyStats, error) {
 	if user.Role != "homeowner" {
-        return EnergyUsage{}, errors.New("access denied: only homeowner can view energy usage")
+        return errors.New("access denied: only homeowner can view energy usage")
     }
 	if days <= 0 {
 		days = 7
