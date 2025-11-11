@@ -122,22 +122,30 @@ func isHomeownerOfTechnician(homeowner, technician string) bool {
     return count > 0
 }
 
-func ListAllUsers() ([]User, error) {
-	rows, err := db.Query("SELECT id, username, role, is_active FROM users")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	users := []User{}
-	for rows.Next() {
-		var user User
-		if err := rows.Scan(&user.ID, &user.Username, &user.Role, &user.IsActive); err != nil {
-			continue
-		}
-		users = append(users, user)
-	}
-	return users, nil
+// ListAllUsers - ONLY homeowners can list all users
+// Technicians and guests cannot view the user list for security/privacy
+func ListAllUsers(requesterRole string) ([]User, error) {
+    // SECURITY: Only homeowners can list all users
+    if requesterRole != "homeowner" {
+        return nil, errors.New("only homeowners can view the user list")
+    }
+    
+    rows, err := db.Query("SELECT id, username, role, is_active FROM users")
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+    users := []User{}
+    for rows.Next() {
+        var user User
+        if err := rows.Scan(&user.ID, &user.Username, &user.Role, &user.IsActive); err != nil {
+            continue
+        }
+        users = append(users, user)
+    }
+    return users, nil
 }
+
 
 // ChangePassword changes the password for homeowners and technicians
 // Guests CANNOT use this function - they must use ChangePIN instead
