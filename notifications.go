@@ -62,7 +62,7 @@ func SendAccessRevokedNotification(username, revokedFrom string) error {
 }
 
 func BroadcastSystemNotification(message string) error {
-	users, err := ListAllUsers(username)
+	users, err := ListAllUsers("homeowner")
 	if err != nil {
 		return err
 	}
