@@ -77,7 +77,7 @@ func ListProfiles(owner string, user *User) ([]Profile, error) {
         rows, err = db.Query("SELECT id, profile_name, target_temp, hvac_mode, owner, guest_accessible, created_at FROM profiles WHERE owner = ? OR guest_accessible = 1", user.Username)
     } else {
         // Homeowner/Admin: see all profiles created by owner
-        rows, err = db.Query("SELECT id, profile_name, target_temp, hvac_mode, owner, guest_accessible, created_at FROM profiles WHERE owner = ?", owner)
+        rows, err = db.Query("SELECT id, profile_name, target_temp, hvac_mode, owner, guest_accessible, created_at FROM profiles")
     }
     if err != nil {
         return nil, err
