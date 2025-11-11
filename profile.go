@@ -25,22 +25,30 @@ type Schedule struct {
 	TargetTemp float64
 }
 
-func CreateProfile(profileName string, targetTemp float64, hvacMode string, owner string) error {
-	if len(profileName) < 2 || len(profileName) > 50 {
-		return errors.New("invalid profile name length")
-	}
-	if targetTemp < 10 || targetTemp > 35 {
-		return errors.New("temperature out of range")
-	}
-	if hvacMode != "off" && hvacMode != "heat" && hvacMode != "cool" && hvacMode != "fan" {
-		return errors.New("invalid HVAC mode")
-	}
-	_, err := db.Exec("INSERT INTO profiles (profile_name, target_temp, hvac_mode, owner) VALUES (?, ?, ?, ?)", profileName, targetTemp, hvacMode, owner)
-	if err != nil {
-		return errors.New("profile already exists")
-	}
-	LogEvent("profile_create", "Profile created: "+profileName, owner, "info")
-	return nil
+func CreateProfile(profileName string, targetTemp float64, hvacMode, owner string, guestAccessible int) error {
+    if len(profileName) < 2 || len(profileName) > 50 {
+        return errors.New("invalid profile name length")
+    }
+    if targetTemp < 10 || targetTemp > 35 {
+        return errors.New("temperature out of range")
+    }
+    if hvacMode != "off" && hvacMode != "heat" && hvacMode != "cool" && hvacMode != "fan" {
+        return errors.New("invalid HVAC mode")
+    }
+    // Secure check: only allow guestAccessible to be 0 or 1
+    if guestAccessible != 0 && guestAccessible != 1 {
+        return errors.New("invalid guest accessible flag (must be 0 or 1)")
+    }
+
+    _, err := db.Exec(
+        "INSERT INTO profiles (profile_name, target_temp, hvac_mode, owner, guest_accessible) VALUES (?, ?, ?, ?, ?)",
+        profileName, targetTemp, hvacMode, owner, guestAccessible,
+    )
+    if err != nil {
+        return errors.New("profile already exists or database error")
+    }
+    LogEvent("profile_create", "Profile created: " + profileName, owner, "info")
+    return nil
 }
 
 func GetProfile(profileName string) (*Profile, error) {
@@ -53,9 +61,7 @@ func GetProfile(profileName string) (*Profile, error) {
 }
 
 func ListProfiles(owner string, user *User) ([]Profile, error) {
-	var rows *sql.Rows
-	var err error
-
+	
 	if user.Role == "guest" {
 		// Guests: only see guest-accessible profiles (regardless of owner)
 		rows, err = db.Query("SELECT id, profile_name, target_temp, hvac_mode, owner, guest_accessible, created_at FROM profiles WHERE guest_accessible = 1")
