@@ -295,19 +295,24 @@ func manageProfiles(reader *bufio.Reader) {
 }
 
 func createProfile(reader *bufio.Reader) {
-	fmt.Print("Profile name: ")
-	name, _ := reader.ReadString('\n')
-	name = strings.TrimSpace(name)
+    fmt.Print("Profile name: ")
+    name, _ := reader.ReadString('\n')
+    name = strings.TrimSpace(name)
 
-	fmt.Print("Target temperature (10-35°C): ")
-	tempStr, _ := reader.ReadString('\n')
-	temp, err := strconv.ParseFloat(strings.TrimSpace(tempStr), 64)
-	if err != nil {
-		fmt.Println("Invalid temperature")
-		return
-	}
+    fmt.Print("Target temperature (10-35°C): ")
+    tempStr, _ := reader.ReadString('\n')
+    temp, err := strconv.ParseFloat(strings.TrimSpace(tempStr), 64)
+    if err != nil {
+        fmt.Println("Invalid temperature")
+        return
+    }
 
-	// New: prompt for guest accessibility
+    // FIX: Add this section to get HVAC mode!
+    fmt.Print("HVAC mode (off/heat/cool/fan): ")
+    mode, _ := reader.ReadString('\n')
+    mode = strings.TrimSpace(mode)
+
+    // New: prompt for guest accessibility
     fmt.Print("Allow guests to view/apply this profile? (yes/no): ")
     guestInput, _ := reader.ReadString('\n')
     guestInput = strings.TrimSpace(strings.ToLower(guestInput))
@@ -323,6 +328,7 @@ func createProfile(reader *bufio.Reader) {
     }
     fmt.Println("Profile created successfully")
 }
+
 
 func applyProfile(reader *bufio.Reader) {
 	fmt.Print("Profile name: ")
