@@ -45,8 +45,13 @@ func RunSystemDiagnostics(user *User) (DiagnosticReport, error) {
         report.NetworkStatus = false
         report.Errors = append(report.Errors, "Network connectivity failed")
     }
-    checkHealth := CheckSensorHealth() // Assume returns string
-    report.SystemHealth = checkHealth
+	errHealth := CheckSensorHealth()
+	if errHealth != nil {
+	    report.SystemHealth = "Unhealthy"
+	    report.Errors = append(report.Errors, errHealth.Error())
+	} else {
+	    report.SystemHealth = "Healthy"
+	}
     LogEvent("diagnostics_complete", "System diagnostics completed", "system", "info")
     return report, nil
 }
