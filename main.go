@@ -355,11 +355,11 @@ func deleteProfile(reader *bufio.Reader) {
 }
 
 func manageUsers(reader *bufio.Reader) {
-	if currentUser.Role != "homeowner" {
-		fmt.Println("Only homeowners can manage users")
-		return
-	}
-
+		if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
+		    fmt.Println("Only homeowners or technicians can manage users")
+		    return
+		}
+	
 	fmt.Println("\n=== USER MANAGEMENT ===")
 	fmt.Println("1. List Users")
 	fmt.Println("2. Create Guest")
