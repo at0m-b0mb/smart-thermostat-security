@@ -131,23 +131,33 @@ func DeleteProfile(profileName, owner string) error {
 	return nil
 }
 
-func AddSchedule(profileID, dayOfWeek int, startTime, endTime string, targetTemp float64) error {
-	if dayOfWeek < 0 || dayOfWeek > 6 {
-		return errors.New("invalid day of week")
-	}
-	if targetTemp < 10 || targetTemp > 35 {
-		return errors.New("temperature out of range")
-	}
-	_, err := db.Exec("INSERT INTO schedules (profile_id, day_of_week, start_time, end_time, target_temp) VALUES (?, ?, ?, ?, ?)", profileID, dayOfWeek, startTime, endTime, targetTemp)
-	if err != nil {
-		return errors.New("failed to add schedule")
-	}
-	LogEvent("schedule_add", fmt.Sprintf("Schedule added for profile %d", profileID), "system", "info")
-	return nil
+func AddSchedule(profileID, dayOfWeek int, startTime, endTime string, targetTemp float64, user *User) error {
+    if user.Role != "homeowner" && user.Role != "technician" {
+        return errors.New("only homeowners or technicians can add a schedule")
+    }
+    if dayOfWeek < 0 || dayOfWeek > 6 {
+        return errors.New("invalid day of week")
+    }
+    if targetTemp < 10 || targetTemp > 35 {
+        return errors.New("temperature out of range")
+    }
+    _, err := db.Exec("INSERT INTO schedules (profile_id, day_of_week, start_time, end_time, target_temp) VALUES (?, ?, ?, ?, ?)", profileID, dayOfWeek, startTime, endTime, targetTemp)
+    if err != nil {
+        return errors.New("failed to add schedule")
+    }
+    LogEvent("schedule_add", fmt.Sprintf("Schedule added for profile %d", profileID), "system", "info")
+    return nil
 }
 
-func GetSchedules(profileID int) ([]Schedule, error) {
-	rows, err := db.Query("SELECT id, profile_id, day_of_week, start_time, end_time, target_temp FROM schedules WHERE profile_id = ?", profileID)
+
+func GetSchedules(profileID int, user *User) ([]Schedule, error) {
+    // Only homeowners and technicians (and maybe certain guests) can view schedules
+    if user.Role != "homeowner" && user.Role != "technician" {
+        if !(user.Role == "guest" && user.GuestAccessible) {
+            return nil, errors.New("permission denied: you cannot view schedules")
+        }
+    }
+	
 	if err != nil {
 		return nil, err
 	}
