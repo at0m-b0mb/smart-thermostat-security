@@ -283,29 +283,29 @@ func manageProfiles(reader *bufio.Reader, currentUser *User) {
 
         switch choice {
         case "1":
-            listProfilesCLI(reader, currentUser)
+            listProfiles(reader)
         case "2":
-            applyProfileCLI(reader, currentUser)
+            applyProfile(reader)
         case "3":
             if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
                 fmt.Println("Only homeowners or technicians can create profiles")
                 continue
             }
-            createProfileCLI(reader, currentUser)
+            createProfile(reader)
         case "4":
             if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
                 fmt.Println("Only homeowners or technicians can delete profiles")
                 continue
             }
-            deleteProfileCLI(reader, currentUser)
+            deleteProfile(reader)
         case "5":
             if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
                 fmt.Println("Only homeowners or technicians can add schedules")
                 continue
             }
-            addScheduleCLI(reader)
+            addSchedule(reader)
         case "6":
-            viewSchedulesCLI(reader)
+            viewSchedules(reader)
         case "0":
             return
         default:
@@ -313,6 +313,19 @@ func manageProfiles(reader *bufio.Reader, currentUser *User) {
         }
     }
 }
+
+func listProfiles(reader *bufio.Reader) {
+	profiles, err := ListProfiles(currentUser.Username, currentUser)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return
+		}
+		fmt.Println("\nYour Profiles:")
+		for _, p := range profiles {
+			fmt.Printf("- %s (Temp: %.1f°C, Mode: %s)\n", p.Name, p.TargetTemp, p.HVACMode)
+		}
+	}
+
 
 func createProfile(reader *bufio.Reader) {
     fmt.Print("Profile name: ")
@@ -374,7 +387,7 @@ func deleteProfile(reader *bufio.Reader) {
 	fmt.Println("Profile deleted successfully")
 }
 
-func addScheduleCLI(reader *bufio.Reader) {
+func addSchedule(reader *bufio.Reader) {
     fmt.Print("Profile ID: ")
     profileIDStr, _ := reader.ReadString('\n')
     profileID, _ := strconv.Atoi(strings.TrimSpace(profileIDStr))
@@ -399,7 +412,7 @@ func addScheduleCLI(reader *bufio.Reader) {
     }
 }
 
-func viewSchedulesCLI(reader *bufio.Reader) {
+func viewSchedules(reader *bufio.Reader) {
     fmt.Print("Profile ID: ")
     profileIDStr, _ := reader.ReadString('\n')
     profileID, _ := strconv.Atoi(strings.TrimSpace(profileIDStr))
@@ -418,7 +431,6 @@ func viewSchedulesCLI(reader *bufio.Reader) {
         fmt.Printf("Day %d: %s - %s, Target: %.1f°C\n", s.DayOfWeek, s.StartTime, s.EndTime, s.TargetTemp)
     }
 }
-
 
 
 func manageUsers(reader *bufio.Reader) {
