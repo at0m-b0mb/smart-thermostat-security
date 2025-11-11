@@ -169,6 +169,24 @@ func resetFailedLogin(username string) error {
 }
 
 func AuthenticateUser(username, password string) (*User, error) {
+		// Validate and sanitize username using security.go functions
+	var validationErr error
+	username, validationErr = ValidateAndSanitizeUsername(username)
+	if validationErr != nil {
+		AuditSecurityEvent("auth_fail", "Invalid username format: "+validationErr.Error(), username)
+		return nil, validationErr
+	}
+	
+	// Check rate limiting to prevent brute force attacks
+	allowed, err := CheckRateLimit(username, "login_attempt", MaxFailedLoginAttempts, AccountLockDuration)
+	if err != nil {
+		return nil, errors.New("authentication error")
+	}
+	if !allowed {
+		AuditSecurityEvent("rate_limit", "Rate limit exceeded for login", username)
+		return nil, errors.New("too many login attempts, please try again later")
+	}
+
 	locked, err := isAccountLocked(username)
 	if err != nil {
 		return nil, errors.New("authentication error")
