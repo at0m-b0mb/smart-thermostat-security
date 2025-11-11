@@ -431,7 +431,7 @@ func deleteProfile(reader *bufio.Reader) {
 	name, _ := reader.ReadString('\n')
 	name = strings.TrimSpace(name)
 
-	if err := DeleteProfile(name, currentUser.Username, currentUser); err != nil {
+	if err := DeleteProfile(name, currentUser.Username, currentUser.Role); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
