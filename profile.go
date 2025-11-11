@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -61,6 +62,8 @@ func GetProfile(profileName string) (*Profile, error) {
 }
 
 func ListProfiles(owner string, user *User) ([]Profile, error) {
+	var rows *sql.Rows
+    var err error
 	
 	if user.Role == "guest" {
 		// Guests: only see guest-accessible profiles (regardless of owner)
