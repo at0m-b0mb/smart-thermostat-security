@@ -289,25 +289,25 @@ func manageProfiles(reader *bufio.Reader, currentUser *User) {
             applyProfile(reader)
         case "3":
             if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
-                fmt.Println("Only homeowners or technicians can create profiles")
+                fmt.Println("Invalid choice")
                 continue
             }
             createProfile(reader)
         case "4":
             if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
-                fmt.Println("Only homeowners or technicians can delete profiles")
+                fmt.Println("Invalid choice")
                 continue
             }
             deleteProfile(reader)
         case "5":
             if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
-                fmt.Println("Only homeowners or technicians can add schedules")
+                fmt.Println("Invalid choice")
                 continue
             }
             addSchedule(reader)
         case "6":
             if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
-                fmt.Println("Only homeowners or technicians can add schedules")
+                fmt.Println("Invalid choice")
                 continue
             }
             viewSchedules(reader)
@@ -488,7 +488,7 @@ func manageUsers(reader *bufio.Reader) {
         case "2":
             // Create technician account - only homeowners
             if currentUser.Role != "homeowner" {
-                fmt.Println("Only homeowners can create technician accounts")
+                fmt.Println("Invalid choice")
                 continue
             }
             
@@ -510,7 +510,7 @@ func manageUsers(reader *bufio.Reader) {
         case "3":
             // Grant technician access - only homeowners
             if currentUser.Role != "homeowner" {
-                fmt.Println("Only homeowners can grant technician access")
+                fmt.Println("Invalid choice")
                 continue
             }
             
@@ -551,7 +551,7 @@ func manageUsers(reader *bufio.Reader) {
         case "5":
             // List all users - only homeowners
             if currentUser.Role != "homeowner" {
-                fmt.Println("Only homeowners can view the user list")
+                fmt.Println("Invalid choice")
                 continue
             }
             
