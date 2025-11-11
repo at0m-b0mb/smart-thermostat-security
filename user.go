@@ -5,24 +5,36 @@ import (
 	"time"
 )
 
-func CreateGuestAccount(homeowner, guestName, pin string) error {
-	if len(guestName) < 3 || len(pin) < 4 {
-		return errors.New("guest name or PIN too short")
-	}
-	guestUsername := homeowner + "_guest_" + guestName
-	err := RegisterGuestUser(guestUsername, pin)
-	if err != nil {
-		return err
-	}
-	_, err = db.Exec("INSERT INTO guest_access (guest_username, granted_by) VALUES (?, ?)", guestUsername, homeowner)
-	if err != nil {
-		return err
-	}
-	LogEvent("create_guest", "Guest created: "+guestUsername, homeowner, "info")
-	return nil
+// CreateGuestAccount - Both homeowners and technicians can create guest accounts
+func CreateGuestAccount(creator, guestName, pin string, creatorRole string) error {
+    // Only homeowners and technicians can create guests
+    if creatorRole != "homeowner" && creatorRole != "technician" {
+        return errors.New("only homeowners or technicians can create guest accounts")
+    }
+    
+    if len(guestName) < 3 || len(pin) < 4 {
+        return errors.New("guest name or PIN too short")
+    }
+    guestUsername := creator + "_guest_" + guestName
+    err := RegisterGuestUser(guestUsername, pin)
+    if err != nil {
+        return err
+    }
+    _, err = db.Exec("INSERT INTO guest_access (guest_username, granted_by) VALUES (?, ?)", guestUsername, creator)
+    if err != nil {
+        return err
+    }
+    LogEvent("create_guest", "Guest created: "+guestUsername, creator, "info")
+    return nil
 }
 
-func CreateTechnicianAccount(homeowner, techName, password string) error {
+// CreateTechnicianAccount - ONLY homeowners can create technician accounts
+func CreateTechnicianAccount(homeowner, techName, password string, creatorRole string) error {
+    // SECURITY: Only homeowners can create technician accounts
+    if creatorRole != "homeowner" {
+        return errors.New("only homeowners can create technician accounts")
+    }
+    
     if len(techName) < 3 || len(password) < 4 {
         return errors.New("technician name or password too short")
     }
@@ -30,44 +42,84 @@ func CreateTechnicianAccount(homeowner, techName, password string) error {
     if err != nil {
         return err
     }
-	expiresAt := "NULL"
-	_, err = db.Exec("INSERT INTO guest_access (guest_username, granted_by, expires_at) VALUES (?, ?, ?)", techName, homeowner, expiresAt)
-	if err != nil {
-		return err
-	}
+    expiresAt := "NULL"
+    _, err = db.Exec("INSERT INTO guest_access (guest_username, granted_by, expires_at) VALUES (?, ?, ?)", techName, homeowner, expiresAt)
+    if err != nil {
+        return err
+    }
     LogEvent("create_technician", "Technician created: "+techName, homeowner, "info")
     return nil
 }
 
-func GrantTechnicianAccess(homeowner, technician string, duration time.Duration) error {
-	tech, err := GetUserByUsername(technician)
-	if err != nil || tech.Role != "technician" {
-		return errors.New("invalid technician")
-	}
-	expiresAt := time.Now().Add(duration)
-
-	res, err := db.Exec(
-		"UPDATE guest_access SET expires_at = ?, is_active = 1 WHERE guest_username = ? AND granted_by = ?",
-		expiresAt, technician, homeowner,
-	)
-	if err != nil {
-		return err
-	}
-	if ra, _ := res.RowsAffected(); ra == 0 {
-		return errors.New("no existing grant found to update")
-	}
-	LogEvent("grant_tech", "Tech access extended until "+expiresAt.Format(time.RFC3339), homeowner, "info")
-	return nil
+// GrantTechnicianAccess - ONLY homeowners can grant/extend technician access
+func GrantTechnicianAccess(homeowner, technician string, duration time.Duration, granterRole string) error {
+    // SECURITY: Only homeowners can grant technician access
+    if granterRole != "homeowner" {
+        return errors.New("only homeowners can grant technician access")
+    }
+    
+    tech, err := GetUserByUsername(technician)
+    if err != nil || tech.Role != "technician" {
+        return errors.New("invalid technician")
+    }
+    expiresAt := time.Now().Add(duration)
+    res, err := db.Exec(
+        "UPDATE guest_access SET expires_at = ?, is_active = 1 WHERE guest_username = ? AND granted_by = ?",
+        expiresAt, technician, homeowner,
+    )
+    if err != nil {
+        return err
+    }
+    if ra, _ := res.RowsAffected(); ra == 0 {
+        return errors.New("no existing grant found to update")
+    }
+    LogEvent("grant_tech", "Tech access extended until "+expiresAt.Format(time.RFC3339), homeowner, "info")
+    return nil
 }
 
-func RevokeAccess(username string) error {
-	_, err := db.Exec("UPDATE users SET is_active = 0, session_token = NULL WHERE username = ?", username)
-	if err != nil {
-		return err
-	}
-	db.Exec("UPDATE guest_access SET is_active = 0 WHERE guest_username = ?", username)
-	LogEvent("revoke_access", "Access revoked", username, "info")
-	return nil
+// RevokeAccess - Both homeowners and technicians can revoke access, but with restrictions
+func RevokeAccess(username string, revokerUsername string, revokerRole string) error {
+    // SECURITY: Check permissions based on role
+    if revokerRole != "homeowner" && revokerRole != "technician" {
+        return errors.New("only homeowners or technicians can revoke access")
+    }
+    
+    // Get the user being revoked
+    targetUser, err := GetUserByUsername(username)
+    if err != nil {
+        return errors.New("user not found")
+    }
+    
+    // SECURITY: Technicians can only revoke guest accounts they manage or that were granted by their homeowner
+    // Technicians CANNOT revoke other technicians or homeowners
+    if revokerRole == "technician" {
+        if targetUser.Role != "guest" {
+            return errors.New("technicians can only revoke guest accounts")
+        }
+        // Verify the guest was granted by this technician or their homeowner
+        var grantedBy string
+        err := db.QueryRow("SELECT granted_by FROM guest_access WHERE guest_username = ?", username).Scan(&grantedBy)
+        if err != nil || (grantedBy != revokerUsername && !isHomeownerOfTechnician(grantedBy, revokerUsername)) {
+            return errors.New("you do not have permission to revoke this guest")
+        }
+    }
+    
+    // Homeowners can revoke anyone in their system
+    // Execute the revocation
+    _, err = db.Exec("UPDATE users SET is_active = 0, session_token = NULL WHERE username = ?", username)
+    if err != nil {
+        return err
+    }
+    db.Exec("UPDATE guest_access SET is_active = 0 WHERE guest_username = ?", username)
+    LogEvent("revoke_access", "Access revoked", username, "info")
+    return nil
+}
+
+// Helper function to check if a homeowner manages a technician
+func isHomeownerOfTechnician(homeowner, technician string) bool {
+    var count int
+    db.QueryRow("SELECT COUNT(*) FROM guest_access WHERE guest_username = ? AND granted_by = ?", technician, homeowner).Scan(&count)
+    return count > 0
 }
 
 func ListAllUsers() ([]User, error) {
