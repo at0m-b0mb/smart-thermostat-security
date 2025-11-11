@@ -60,7 +60,7 @@ func GetProfile(profileName string) (*Profile, error) {
 	err := db.QueryRow("SELECT id, profile_name, target_temp, hvac_mode, owner, guest_accessible, created_at FROM profiles WHERE profile_name = ?", profileName).
     Scan(&profile.ID, &profile.Name, &profile.TargetTemp, &profile.HVACMode, &profile.Owner, &profile.GuestAccessible, &profile.CreatedAt)
 	if err != nil {
-		return nil, errors.New("profile not found")
+		return nil, errors.New("cannot apply this profile")
 	}
 	return &profile, nil
 }
@@ -101,7 +101,7 @@ func ApplyProfile(profileName string, user *User) error {
 	// Only allow guests to apply profiles where guest_accessible == 1
 	if user.Role == "guest" {
 		if profile.GuestAccessible != 1 {
-			return errors.New("guests may only apply profiles marked accessible to guests")
+			return errors.New("cannot apply this profile")
 		}
 	}
 	
@@ -125,7 +125,7 @@ func DeleteProfile(profileName, owner string) error {
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		return errors.New("profile not found or unauthorized")
+		return errors.New("cannot apply this profile or unauthorized")
 	}
 	LogEvent("profile_delete", "Profile deleted: "+profileName, owner, "info")
 	return nil
