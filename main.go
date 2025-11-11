@@ -307,15 +307,21 @@ func createProfile(reader *bufio.Reader) {
 		return
 	}
 
-	fmt.Print("HVAC mode (off/heat/cool/fan): ")
-	mode, _ := reader.ReadString('\n')
-	mode = strings.TrimSpace(mode)
+	// New: prompt for guest accessibility
+    fmt.Print("Allow guests to view/apply this profile? (yes/no): ")
+    guestInput, _ := reader.ReadString('\n')
+    guestInput = strings.TrimSpace(strings.ToLower(guestInput))
+    guestAccessible := 0
+    if guestInput == "yes" || guestInput == "y" {
+        guestAccessible = 1
+    }
 
-	if err := CreateProfile(name, temp, mode, currentUser.Username); err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return
-	}
-	fmt.Println("Profile created successfully")
+    // Call CreateProfile with the new parameter
+    if err := CreateProfile(name, temp, mode, currentUser.Username, guestAccessible); err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    fmt.Println("Profile created successfully")
 }
 
 func applyProfile(reader *bufio.Reader) {
