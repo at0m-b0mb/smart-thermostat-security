@@ -57,7 +57,8 @@ func CreateProfile(profileName string, targetTemp float64, hvacMode, owner strin
 
 func GetProfile(profileName string) (*Profile, error) {
 	var profile Profile
-	err := db.QueryRow("SELECT id, profile_name, target_temp, hvac_mode, owner, created_at FROM profiles WHERE profile_name = ?", profileName).Scan(&profile.ID, &profile.Name, &profile.TargetTemp, &profile.HVACMode, &profile.Owner, &profile.CreatedAt)
+	err := db.QueryRow("SELECT id, profile_name, target_temp, hvac_mode, owner, guest_accessible, created_at FROM profiles WHERE profile_name = ?", profileName).
+    Scan(&profile.ID, &profile.Name, &profile.TargetTemp, &profile.HVACMode, &profile.Owner, &profile.GuestAccessible, &profile.CreatedAt)
 	if err != nil {
 		return nil, errors.New("profile not found")
 	}
