@@ -42,12 +42,13 @@ func InitializeDatabase() error {
 	);`
 
 	createProfilesTable := `CREATE TABLE IF NOT EXISTS profiles (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		profile_name TEXT UNIQUE NOT NULL,
-		target_temp REAL NOT NULL CHECK(target_temp >= 10 AND target_temp <= 35),
-		hvac_mode TEXT NOT NULL CHECK(hvac_mode IN ('off', 'heat', 'cool', 'fan')),
-		owner TEXT NOT NULL,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	    id INTEGER PRIMARY KEY AUTOINCREMENT,
+	    profile_name TEXT UNIQUE NOT NULL,
+	    target_temp REAL NOT NULL CHECK(target_temp >= 10 AND target_temp <= 35),
+	    hvac_mode TEXT NOT NULL CHECK(hvac_mode IN ('off', 'heat', 'cool', 'fan')),
+	    owner TEXT NOT NULL,
+	    guest_accessible INTEGER DEFAULT 0, 
+	    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
 
 	createSchedulesTable := `CREATE TABLE IF NOT EXISTS schedules (
