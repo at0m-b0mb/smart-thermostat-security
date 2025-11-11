@@ -447,7 +447,7 @@ func revokeUserAccess(reader *bufio.Reader) {
 
 func runDiagnostics() {
 	fmt.Println("\n=== RUNNING SYSTEM DIAGNOSTICS ===")
-	report, err := RunSystemDiagnostics()
+	report, err := RunSystemDiagnostics(currentUser)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
