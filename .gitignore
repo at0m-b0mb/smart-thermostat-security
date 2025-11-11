@@ -30,3 +30,9 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Application specific
+smart-thermostat-security
+thermostat
+thermostat.db
+*.db

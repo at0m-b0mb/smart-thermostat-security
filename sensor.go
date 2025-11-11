@@ -31,7 +31,8 @@ var (
 func InitializeSensors() error {
     sensorMutex.Lock()
     defer sensorMutex.Unlock()
-    rand.Seed(time.Now().UnixNano())
+    // Note: math/rand is automatically seeded in Go 1.20+
+    // No need for rand.Seed() anymore
     lastReading = SensorReading{
         Temperature: 20.0,
         Humidity:    50.0,
@@ -44,71 +45,82 @@ func InitializeSensors() error {
 
 func ReadTemperature() (float64, error) {
     sensorMutex.RLock()
-    defer sensorMutex.RUnlock()
     if !sensorHealth {
+        sensorMutex.RUnlock()
         return 0, errors.New("sensor malfunction")
     }
+    sensorMutex.RUnlock()
+    
     temp := 18.0 + rand.Float64()*10.0
     if temp < -50 || temp > 100 {
+        sensorMutex.Lock()
         errorCount++
+        sensorMutex.Unlock()
         LogEvent("sensor_error", "Temperature out of range", "system", "warning")
         return 0, errors.New("invalid temperature")
     }
-    // Only update timestamp and lastReading with a LOCK
-    sensorMutex.RUnlock()
+    
     sensorMutex.Lock()
     lastReading.Temperature = temp
     lastReading.Timestamp = time.Now()
+    humidity := lastReading.Humidity
+    co := lastReading.CO
     sensorMutex.Unlock()
-    sensorMutex.RLock()
-    db.Exec("INSERT INTO sensor_readings (temperature, humidity, co_level) VALUES (?, ?, ?)", temp, lastReading.Humidity, lastReading.CO)
+    
+    db.Exec("INSERT INTO sensor_readings (temperature, humidity, co_level) VALUES (?, ?, ?)", temp, humidity, co)
     return temp, nil
 }
 
 func ReadHumidity() (float64, error) {
     sensorMutex.RLock()
-    defer sensorMutex.RUnlock()
     if !sensorHealth {
+        sensorMutex.RUnlock()
         return 0, errors.New("sensor malfunction")
     }
+    sensorMutex.RUnlock()
+    
     humidity := 30.0 + rand.Float64()*40.0
     if humidity < 0 || humidity > 100 {
+        sensorMutex.Lock()
         errorCount++
+        sensorMutex.Unlock()
         LogEvent("sensor_error", "Humidity out of range", "system", "warning")
         return 0, errors.New("invalid humidity")
     }
-    // Only update timestamp and lastReading with a LOCK
-    sensorMutex.RUnlock()
+    
     sensorMutex.Lock()
     lastReading.Humidity = humidity
     lastReading.Timestamp = time.Now()
     sensorMutex.Unlock()
-    sensorMutex.RLock()
+    
     return humidity, nil
 }
 
 func ReadCO() (float64, error) {
     sensorMutex.RLock()
-    defer sensorMutex.RUnlock()
     if !sensorHealth {
+        sensorMutex.RUnlock()
         return 0, errors.New("sensor malfunction")
     }
+    sensorMutex.RUnlock()
+    
     co := rand.Float64() * 10.0
     if co < 0 || co > 1000 {
+        sensorMutex.Lock()
         errorCount++
+        sensorMutex.Unlock()
         LogEvent("sensor_error", "CO out of range", "system", "warning")
         return 0, errors.New("invalid CO")
     }
     if co > 50 {
         LogEvent("co_alert", "Dangerous CO level detected", "system", "critical")
     }
-    // Only update timestamp and lastReading with a LOCK
-    sensorMutex.RUnlock()
+    
     sensorMutex.Lock()
     lastReading.CO = co
     lastReading.Timestamp = time.Now()
     sensorMutex.Unlock()
-    sensorMutex.RLock()
+    
     return co, nil
 }
 

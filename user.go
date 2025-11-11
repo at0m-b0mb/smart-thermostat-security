@@ -106,7 +106,7 @@ func RevokeAccess(username string, revokerUsername string, revokerRole string) e
     
     // Homeowners can revoke anyone in their system
     // Execute the revocation
-    _, err = db.Exec("UPDATE users SET is_active = 0, session_token = NULL WHERE username = ?", username)
+    _, err = db.Exec("UPDATE users SET is_active = 0, session_token = NULL, session_expires_at = NULL WHERE username = ?", username)
     if err != nil {
         return err
     }

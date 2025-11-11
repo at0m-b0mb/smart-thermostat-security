@@ -15,7 +15,8 @@ const (
 	MinUsernameLen         = 3
 	MaxFailedLoginAttempts = 5
 	AccountLockDuration    = 15 * time.Minute
-		MinPinLen              = 4
+	SessionDuration        = 24 * time.Hour // Session expires after 24 hours
+	MinPinLen              = 4
 )
 
 type User struct {
@@ -217,7 +218,8 @@ func AuthenticateUser(username, password string) (*User, error) {
 	}
 	resetFailedLogin(username)
 	user.SessionToken = GenerateSessionToken()
-	db.Exec("UPDATE users SET last_login = ?, session_token = ? WHERE username = ?", time.Now(), user.SessionToken, username)
+	sessionExpiresAt := time.Now().Add(SessionDuration)
+	db.Exec("UPDATE users SET last_login = ?, session_token = ?, session_expires_at = ? WHERE username = ?", time.Now(), user.SessionToken, sessionExpiresAt, username)
 	if lastLogin.Valid {
 		user.LastLogin = lastLogin.Time
 	}
@@ -230,16 +232,26 @@ func VerifySession(token string) (*User, error) {
 		return nil, errors.New("no session token")
 	}
 	var user User
-	err := db.QueryRow("SELECT id, username, role, is_active FROM users WHERE session_token = ? AND is_active = 1", token).Scan(&user.ID, &user.Username, &user.Role, &user.IsActive)
+	var sessionExpiresAt sql.NullTime
+	err := db.QueryRow("SELECT id, username, role, is_active, session_expires_at FROM users WHERE session_token = ? AND is_active = 1", token).Scan(&user.ID, &user.Username, &user.Role, &user.IsActive, &sessionExpiresAt)
 	if err != nil {
 		return nil, errors.New("invalid session")
 	}
+	
+	// Check if session has expired
+	if sessionExpiresAt.Valid && time.Now().After(sessionExpiresAt.Time) {
+		// Session expired, clear it
+		db.Exec("UPDATE users SET session_token = NULL, session_expires_at = NULL WHERE username = ?", user.Username)
+		LogEvent("session_expired", "Session expired", user.Username, "warning")
+		return nil, errors.New("session expired")
+	}
+	
 	user.SessionToken = token
 	return &user, nil
 }
 
 func LogoutUser(username string) error {
-	_, err := db.Exec("UPDATE users SET session_token = NULL WHERE username = ?", username)
+	_, err := db.Exec("UPDATE users SET session_token = NULL, session_expires_at = NULL WHERE username = ?", username)
 	if err != nil {
 		return err
 	}
