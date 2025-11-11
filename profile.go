@@ -66,57 +66,65 @@ func GetProfile(profileName string) (*Profile, error) {
 }
 
 func ListProfiles(owner string, user *User) ([]Profile, error) {
-	var rows *sql.Rows
+    var rows *sql.Rows
     var err error
-	
-	if user.Role == "guest" {
-		// Guests: only see guest-accessible profiles (regardless of owner)
-		rows, err = db.Query("SELECT id, profile_name, target_temp, hvac_mode, owner, guest_accessible, created_at FROM profiles WHERE guest_accessible = 1")
-	} else {
-		// Non-guests: see all profiles created by owner
-		rows, err = db.Query("SELECT id, profile_name, target_temp, hvac_mode, owner, guest_accessible, created_at FROM profiles WHERE owner = ?", owner)
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
 
-	profiles := []Profile{}
-	for rows.Next() {
-		var p Profile
-		if err := rows.Scan(&p.ID, &p.Name, &p.TargetTemp, &p.HVACMode, &p.Owner, &p.GuestAccessible, &p.CreatedAt); err != nil {
-			continue
-		}
-		profiles = append(profiles, p)
-	}
-	return profiles, nil
+    if user.Role == "guest" {
+        // Guests: only see guest-accessible profiles
+        rows, err = db.Query("SELECT id, profile_name, target_temp, hvac_mode, owner, guest_accessible, created_at FROM profiles WHERE guest_accessible = 1")
+    } else if user.Role == "technician" {
+        // Technicians: see profiles they own OR guest-accessible profiles
+        rows, err = db.Query("SELECT id, profile_name, target_temp, hvac_mode, owner, guest_accessible, created_at FROM profiles WHERE owner = ? OR guest_accessible = 1", user.Username)
+    } else {
+        // Homeowner/Admin: see all profiles created by owner
+        rows, err = db.Query("SELECT id, profile_name, target_temp, hvac_mode, owner, guest_accessible, created_at FROM profiles WHERE owner = ?", owner)
+    }
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    profiles := []Profile{}
+    for rows.Next() {
+        var p Profile
+        if err := rows.Scan(&p.ID, &p.Name, &p.TargetTemp, &p.HVACMode, &p.Owner, &p.GuestAccessible, &p.CreatedAt); err != nil {
+            continue
+        }
+        profiles = append(profiles, p)
+    }
+    return profiles, nil
 }
-
 
 func ApplyProfile(profileName string, user *User) error {
-	profile, err := GetProfile(profileName)
-	if err != nil {
-		return err
-	}
-	// Only allow guests to apply profiles where guest_accessible == 1
-	if user.Role == "guest" {
-		if profile.GuestAccessible != 1 {
-			return errors.New("cannot apply this profile")
-		}
-	}
-	
-	err = SetHVACMode(profile.HVACMode, user)
-	if err != nil {
-		return err
-	}
-	err = SetTargetTemperature(profile.TargetTemp, user)
-	if err != nil {
-		return err
-	}
-	LogEvent("profile_apply", "Profile applied: "+profileName, user.Username, "info")
-	return nil
-}
+    profile, err := GetProfile(profileName)
+    if err != nil {
+        return err
+    }
+    // Guests: only apply if guest-accessible
+    if user.Role == "guest" {
+        if profile.GuestAccessible != 1 {
+            return errors.New("cannot apply this profile")
+        }
+    }
+    // Technicians: only apply if guest-accessible or their own profile
+    if user.Role == "technician" {
+        if profile.Owner != user.Username && profile.GuestAccessible != 1 {
+            return errors.New("technician cannot apply this profile")
+        }
+    }
+    // Homeowner/Admin: can apply any profile
 
+    err = SetHVACMode(profile.HVACMode, user)
+    if err != nil {
+        return err
+    }
+    err = SetTargetTemperature(profile.TargetTemp, user)
+    if err != nil {
+        return err
+    }
+    LogEvent("profile_apply", "Profile applied: "+profileName, user.Username, "info")
+    return nil
+}
 
 func DeleteProfile(profileName, owner string) error {
 	result, err := db.Exec("DELETE FROM profiles WHERE profile_name = ? AND owner = ?", profileName, owner)
