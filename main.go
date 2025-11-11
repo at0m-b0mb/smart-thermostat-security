@@ -113,56 +113,94 @@ func runCLI() {
 }
 
 func displayMenu() {
-	fmt.Println("\n=== MAIN MENU ===")
-	fmt.Println("1.  View Current Status")
-	fmt.Println("2.  Set Target Temperature")
-	fmt.Println("3.  Change HVAC Mode")
-	fmt.Println("4.  View Sensor Readings")
-	fmt.Println("5.  View Weather")
-	fmt.Println("6.  View Energy Usage")
-	fmt.Println("7.  Manage Profiles")
-	fmt.Println("8.  Manage Users")
-	fmt.Println("9.  Run Diagnostics")
-	fmt.Println("10. View Audit Logs")
-	fmt.Println("11. Change Password")
-	fmt.Println("12. Logout")
-	fmt.Println("0.  Exit")
+    fmt.Println("\n=== MAIN MENU ===")
+    fmt.Println("1.  View Current Status")
+    fmt.Println("2.  Set Target Temperature")
+    fmt.Println("3.  Change HVAC Mode")
+    fmt.Println("4.  View Sensor Readings")
+    fmt.Println("5.  View Weather")
+
+    // Homeowner and technician can view energy usage
+    if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
+        fmt.Println("6.  View Energy Usage")
+        fmt.Println("7.  Manage Profiles")
+        fmt.Println("8.  Manage Users")
+        fmt.Println("9.  Run Diagnostics")
+    } else {
+        // For guests, allow only these:
+        fmt.Println("6.  Apply Profile")
+    }
+
+    // Only homeowner can view audit logs
+    if currentUser.Role == "homeowner" {
+        fmt.Println("10. View Audit Logs")
+    }
+
+    fmt.Println("11. Change Password")
+    fmt.Println("12. Logout")
+    fmt.Println("0.  Exit")
 }
 
 func handleMenuChoice(choice string, reader *bufio.Reader) {
-	switch choice {
-	case "1":
-		viewCurrentStatus()
-	case "2":
-		setTargetTemperature(reader)
-	case "3":
-		changeHVACMode(reader)
-	case "4":
-		viewSensorReadings()
-	case "5":
-		viewWeather(reader)
-	case "6":
-		viewEnergyUsage(reader)
-	case "7":
-		manageProfiles(reader, currentUser)
-	case "8":
-		manageUsers(reader)
-	case "9":
-		runDiagnostics()
-	case "10":
-		viewAuditLogs()
-	case "11":
-		changePasswordCLI(reader)
-	case "12":
-		logout()
-	case "0":
-		fmt.Println("Goodbye!")
-		CloseDatabase()
-		os.Exit(0)
-	default:
-		fmt.Println("Invalid choice")
-	}
+    switch choice {
+    case "1":
+        viewCurrentStatus()
+    case "2":
+        setTargetTemperature(reader)
+    case "3":
+        changeHVACMode(reader)
+    case "4":
+        viewSensorReadings()
+    case "5":
+        viewWeather(reader)
+
+    // Homeowner or technician only
+    case "6":
+        if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
+            viewEnergyUsage(reader)
+        } else if currentUser.Role == "guest" {
+            applyProfile(reader)
+        } else {
+            fmt.Println("Invalid choice")
+        }
+
+    case "7":
+        if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
+            manageProfiles(reader, currentUser)
+        } else {
+            fmt.Println("Invalid choice")
+        }
+    case "8":
+        if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
+            manageUsers(reader)
+        } else {
+            fmt.Println("Invalid choice")
+        }
+    case "9":
+        if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
+            runDiagnostics()
+        } else {
+            fmt.Println("Invalid choice")
+        }
+    case "10":
+        if currentUser.Role == "homeowner" {
+            viewAuditLogs()
+        } else {
+            fmt.Println("Invalid choice")
+        }
+    case "11":
+        changePasswordCLI(reader)
+    case "12":
+        logout()
+    case "0":
+        fmt.Println("Goodbye!")
+        CloseDatabase()
+        os.Exit(0)
+    default:
+        fmt.Println("Invalid choice")
+    }
 }
+
 
 func viewCurrentStatus() {
 	fmt.Println("\n=== CURRENT SYSTEM STATUS ===")
