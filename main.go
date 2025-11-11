@@ -355,51 +355,165 @@ func deleteProfile(reader *bufio.Reader) {
 }
 
 func manageUsers(reader *bufio.Reader) {
-		if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
-		    fmt.Println("Only homeowners or technicians can manage users")
-		    return
-		}
-	
-	fmt.Println("\n=== USER MANAGEMENT ===")
-	fmt.Println("1. List Users")
-	fmt.Println("2. Create Guest")
-	fmt.Println("3. Create Technician")
-	fmt.Println("4. Grant Technician Access")
-	fmt.Println("5. Revoke Access")
-	
-	fmt.Print("Choice: ")
-	choice, _ := reader.ReadString('\n')
-	choice = strings.TrimSpace(choice)
-
-	switch choice {
-	case "1":
-		listUsers()
-	case "2":
-		createGuest(reader)
-	case "3":
-		createTechnician(reader) 
-	case "4":
-		grantTechAccess(reader)
-	case "5":
-		revokeUserAccess(reader)
-	}
+    if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
+        fmt.Println("Only homeowners or technicians can manage users")
+        return
+    }
+    
+    for {
+        fmt.Println("\n=== USER MANAGEMENT ===")
+        fmt.Println("1. Create Guest Account")
+        
+        // Only show "Create Technician" option to homeowners
+        if currentUser.Role == "homeowner" {
+            fmt.Println("2. Create Technician Account")
+            fmt.Println("3. Grant/Extend Technician Access")
+        }
+        
+        fmt.Println("4. Revoke User Access")
+        
+        // Only show "List All Users" to homeowners
+        if currentUser.Role == "homeowner" {
+            fmt.Println("5. List All Users")
+        }
+        
+        fmt.Println("0. Back to Main Menu")
+        fmt.Print("Enter choice: ")
+        
+        choice, _ := reader.ReadString('\n')
+        choice = strings.TrimSpace(choice)
+        
+        switch choice {
+        case "1":
+            // Create guest account - both homeowner and technician allowed
+            fmt.Print("Guest name: ")
+            guestName, _ := reader.ReadString('\n')
+            guestName = strings.TrimSpace(guestName)
+            
+            fmt.Print("PIN (minimum 4 digits): ")
+            pin, _ := reader.ReadString('\n')
+            pin = strings.TrimSpace(pin)
+            
+            err := CreateGuestAccount(currentUser.Username, guestName, pin, currentUser.Role)
+            if err != nil {
+                fmt.Printf("Error: %v\n", err)
+            } else {
+                fmt.Println("Guest account created successfully")
+            }
+            
+        case "2":
+            // Create technician account - only homeowners
+            if currentUser.Role != "homeowner" {
+                fmt.Println("Only homeowners can create technician accounts")
+                continue
+            }
+            
+            fmt.Print("Technician username: ")
+            techName, _ := reader.ReadString('\n')
+            techName = strings.TrimSpace(techName)
+            
+            fmt.Print("Password (minimum 4 characters): ")
+            password, _ := reader.ReadString('\n')
+            password = strings.TrimSpace(password)
+            
+            err := CreateTechnicianAccount(currentUser.Username, techName, password, currentUser.Role)
+            if err != nil {
+                fmt.Printf("Error: %v\n", err)
+            } else {
+                fmt.Println("Technician account created successfully")
+            }
+            
+        case "3":
+            // Grant technician access - only homeowners
+            if currentUser.Role != "homeowner" {
+                fmt.Println("Only homeowners can grant technician access")
+                continue
+            }
+            
+            fmt.Print("Technician username: ")
+            techName, _ := reader.ReadString('\n')
+            techName = strings.TrimSpace(techName)
+            
+            fmt.Print("Duration in hours: ")
+            durationStr, _ := reader.ReadString('\n')
+            durationStr = strings.TrimSpace(durationStr)
+            hours, err := strconv.Atoi(durationStr)
+            if err != nil {
+                fmt.Println("Invalid duration")
+                continue
+            }
+            duration := time.Duration(hours) * time.Hour
+            
+            err = GrantTechnicianAccess(currentUser.Username, techName, duration, currentUser.Role)
+            if err != nil {
+                fmt.Printf("Error: %v\n", err)
+            } else {
+                fmt.Println("Technician access granted successfully")
+            }
+            
+        case "4":
+            // Revoke user access - both homeowner and technician (with restrictions)
+            fmt.Print("Username to revoke: ")
+            username, _ := reader.ReadString('\n')
+            username = strings.TrimSpace(username)
+            
+            err := RevokeAccess(username, currentUser.Username, currentUser.Role)
+            if err != nil {
+                fmt.Printf("Error: %v\n", err)
+            } else {
+                fmt.Println("User access revoked successfully")
+            }
+            
+        case "5":
+            // List all users - only homeowners
+            if currentUser.Role != "homeowner" {
+                fmt.Println("Only homeowners can view the user list")
+                continue
+            }
+            
+            users, err := ListAllUsers(currentUser.Role)
+            if err != nil {
+                fmt.Printf("Error: %v\n", err)
+                continue
+            }
+            
+            fmt.Println("\n=== ALL USERS ===")
+            for _, u := range users {
+                status := "Active"
+                if !u.IsActive {
+                    status = "Inactive"
+                }
+                fmt.Printf("ID: %d | Username: %s | Role: %s | Status: %s\n", u.ID, u.Username, u.Role, status)
+            }
+            
+        case "0":
+            return
+            
+        default:
+            fmt.Println("Invalid choice")
+        }
+    }
 }
 
+
+// Helper function to list users
 func listUsers() {
-	users, err := ListAllUsers()
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return
-	}
-	fmt.Println("\nAll Users:")
-	for _, u := range users {
-		status := "Active"
-		if !u.IsActive {
-			status = "Inactive"
-		}
-		fmt.Printf("- %s (Role: %s, Status: %s)\n", u.Username, u.Role, status)
-	}
+    users, err := ListAllUsers(currentUser.Role)
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    
+    fmt.Println("\n=== ALL USERS ===")
+    for _, u := range users {
+        status := "Active"
+        if !u.IsActive {
+            status = "Inactive"
+        }
+        fmt.Printf("ID: %d | Username: %s | Role: %s | Status: %s\n", u.ID, u.Username, u.Role, status)
+    }
 }
+
 
 func createGuest(reader *bufio.Reader) {
 	fmt.Print("Guest name: ")
