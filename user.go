@@ -146,6 +146,36 @@ func ListAllUsers(requesterRole string) ([]User, error) {
     return users, nil
 }
 
+// DeleteUser permanently deletes a user from the system.
+// Only homeowners can delete a user—and never themselves!
+func DeleteUser(requester, usernameToDelete, requesterRole string) error {
+    // SECURITY: Only homeowners can delete users
+    if requesterRole != "homeowner" {
+        return errors.New("only homeowners can delete users")
+    }
+    // Prevent deletion of the requesting homeowner’s own account
+    if usernameToDelete == requester {
+        return errors.New("cannot delete your own (homeowner) account")
+    }
+    // Check if user exists
+    targetUser, err := GetUserByUsername(usernameToDelete)
+    if err != nil {
+        return errors.New("user not found")
+    }
+    // Prevent homeowners from deleting other homeowners
+    if targetUser.Role == "homeowner" {
+        return errors.New("cannot delete other homeowner accounts")
+    }
+    // Real delete from users table
+    _, err = db.Exec("DELETE FROM users WHERE username = ?", usernameToDelete)
+    if err != nil {
+        return err
+    }
+    // Clean up guest_access (if any)
+    db.Exec("DELETE FROM guest_access WHERE guest_username = ?", usernameToDelete)
+    LogEvent("delete_user", "Permanently deleted user: "+usernameToDelete, requester, "warning")
+    return nil
+}
 
 // ChangePassword changes the password for homeowners and technicians
 // Guests CANNOT use this function - they must use ChangePIN instead
