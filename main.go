@@ -115,7 +115,11 @@ func runCLI() {
 func displayMenu() {
     fmt.Println("\n=== MAIN MENU ===")
     fmt.Println("1.  View Current Status")
-    fmt.Println("2.  Set Target Temperature")
+	
+	if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
+  		fmt.Println("2.  Set Target Temperature")    
+	}
+  
     fmt.Println("3.  Change HVAC Mode")
     fmt.Println("4.  View Sensor Readings")
     fmt.Println("5.  View Weather")
@@ -128,7 +132,7 @@ func displayMenu() {
         fmt.Println("9.  Run Diagnostics")
     } else {
         // For guests, allow only these:
-        fmt.Println("6.  Apply Profile")
+        fmt.Println("6.  Manage Profiles")
     }
 
     // Only homeowner can view audit logs
@@ -146,7 +150,11 @@ func handleMenuChoice(choice string, reader *bufio.Reader) {
     case "1":
         viewCurrentStatus()
     case "2":
-        setTargetTemperature(reader)
+		if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
+        	setTargetTemperature(reader)
+        } else {
+            fmt.Println("Invalid choice")
+        }
     case "3":
         changeHVACMode(reader)
     case "4":
