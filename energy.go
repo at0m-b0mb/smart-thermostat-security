@@ -89,6 +89,6 @@ func TrackEnergyUsage(mode HVACMode, runtimeMinutes int) error {
 	if err != nil {
 		return err
 	}
-	LogEvent("energy_track", fmt.Sprintf("Tracked %.2f kWh for %s mode", kwh, mode), "system", "info")
+	//LogEvent("energy_track", fmt.Sprintf("Tracked %.2f kWh for %s mode", kwh, mode), "system", "info")
 	return nil
 }
