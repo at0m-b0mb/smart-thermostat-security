@@ -1,11 +1,11 @@
 package main
 
 import (
-	"time"
 	"errors"
 	"html"
 	"regexp"
 	"strings"
+	"time"
 )
 
 func SanitizeInput(input string) string {

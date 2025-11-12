@@ -6,13 +6,13 @@ import (
 )
 
 type EnergyStats struct {
-	TotalKWH       float64
-	TotalRuntime   int
-	HeatingKWH     float64
-	CoolingKWH     float64
-	FanKWH         float64
-	EstimatedCost  float64
-	Period         string
+	TotalKWH      float64
+	TotalRuntime  int
+	HeatingKWH    float64
+	CoolingKWH    float64
+	FanKWH        float64
+	EstimatedCost float64
+	Period        string
 }
 
 func GetEnergyUsage(days int) (EnergyStats, error) {

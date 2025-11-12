@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"errors"
+	"golang.org/x/crypto/bcrypt"
 	"regexp"
 	"time"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -141,13 +141,13 @@ func isAccountLocked(username string) (bool, error) {
 }
 
 func IsTechnicianAccessAllowed(db *sql.DB, username string) bool {
-    var expiresAt time.Time
-    err := db.QueryRow(
-        "SELECT expires_at FROM guest_access WHERE guest_username = ? AND expires_at > ? ORDER BY expires_at DESC LIMIT 1",
-        username, time.Now(),
-    ).Scan(&expiresAt)
-    // Access only allowed if there is a non-expired grant
-    return err == nil && time.Now().Before(expiresAt)
+	var expiresAt time.Time
+	err := db.QueryRow(
+		"SELECT expires_at FROM guest_access WHERE guest_username = ? AND expires_at > ? ORDER BY expires_at DESC LIMIT 1",
+		username, time.Now(),
+	).Scan(&expiresAt)
+	// Access only allowed if there is a non-expired grant
+	return err == nil && time.Now().Before(expiresAt)
 }
 
 func incrementFailedLogin(username string) error {
@@ -170,14 +170,14 @@ func resetFailedLogin(username string) error {
 }
 
 func AuthenticateUser(username, password string) (*User, error) {
-		// Validate and sanitize username using security.go functions
+	// Validate and sanitize username using security.go functions
 	var validationErr error
 	username, validationErr = ValidateAndSanitizeUsername(username)
 	if validationErr != nil {
 		AuditSecurityEvent("auth_fail", "Invalid username format: "+validationErr.Error(), username)
 		return nil, validationErr
 	}
-	
+
 	// Check rate limiting to prevent brute force attacks
 	allowed, err := CheckRateLimit(username, "login_attempt", MaxFailedLoginAttempts, AccountLockDuration)
 	if err != nil {
@@ -237,7 +237,7 @@ func VerifySession(token string) (*User, error) {
 	if err != nil {
 		return nil, errors.New("invalid session")
 	}
-	
+
 	// Check if session has expired
 	if sessionExpiresAt.Valid && time.Now().After(sessionExpiresAt.Time) {
 		// Session expired, clear it
@@ -245,7 +245,7 @@ func VerifySession(token string) (*User, error) {
 		LogEvent("session_expired", "Session expired", user.Username, "warning")
 		return nil, errors.New("session expired")
 	}
-	
+
 	user.SessionToken = token
 	return &user, nil
 }

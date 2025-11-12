@@ -2,8 +2,8 @@ package main
 
 import (
 	"errors"
-	"math/rand"
 	"fmt"
+	"math/rand"
 	"time"
 )
 
