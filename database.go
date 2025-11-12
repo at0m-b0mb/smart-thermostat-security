@@ -135,6 +135,10 @@ func InitializeDatabase() error {
 		return fmt.Errorf("failed to initialize maintenance: %w", err)
 	}
 
+	if err = InitializeGeofencingTable(); err != nil {
+		return fmt.Errorf("failed to initialize geofencing: %w", err)
+	}
+
 	LogEvent("system", "Database initialized", "system", "info")
 	return nil
 }

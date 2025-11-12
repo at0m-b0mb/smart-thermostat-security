@@ -47,6 +47,7 @@ func main() {
 	go sessionCleanupLoop()
 	go awayModeCheckLoop()
 	go maintenanceCheckLoop()
+	go geofenceCheckLoop()
 
 	// Main CLI loop
 	runCLI()
@@ -113,6 +114,16 @@ func maintenanceCheckLoop() {
 	}
 }
 
+func geofenceCheckLoop() {
+	ticker := time.NewTicker(2 * time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		if err := CheckGeofenceStatus(); err != nil {
+			LogEvent("geofence_error", "Geofence check failed: "+err.Error(), "system", "warning")
+		}
+	}
+}
+
 func runCLI() {
 	reader := bufio.NewReader(os.Stdin)
 
@@ -174,6 +185,7 @@ func displayMenu() {
         fmt.Println("13. Vacation/Away Mode")
         fmt.Println("14. Filter Maintenance")
         fmt.Println("15. Eco Mode Settings")
+        fmt.Println("16. Geofencing & Presence")
     }
 
     fmt.Println("11. Change Password")
@@ -251,6 +263,12 @@ func handleMenuChoice(choice string, reader *bufio.Reader) {
     case "15":
         if currentUser.Role == "homeowner" {
             manageEcoMode(reader)
+        } else {
+            fmt.Println("Invalid choice")
+        }
+    case "16":
+        if currentUser.Role == "homeowner" {
+            manageGeofencing(reader)
         } else {
             fmt.Println("Invalid choice")
         }
@@ -1050,6 +1068,197 @@ func manageEcoMode(reader *bufio.Reader) {
 				} else {
 					fmt.Println("Eco mode disabled. Returning to standard operation.")
 				}
+			}
+			
+		case "0":
+			return
+			
+		default:
+			fmt.Println("Invalid choice")
+		}
+	}
+}
+
+func manageGeofencing(reader *bufio.Reader) {
+	for {
+		fmt.Println("\n=== GEOFENCING & PRESENCE DETECTION ===")
+		
+		// Display current geofence status
+		config, err := GetGeofenceConfig()
+		if err != nil {
+			fmt.Printf("Error getting geofence config: %v\n", err)
+		} else {
+			fmt.Println(DisplayGeofenceStatus(config))
+		}
+		
+		fmt.Println("\n1. Enable Geofencing")
+		fmt.Println("2. Disable Geofencing")
+		fmt.Println("3. Set Home Location")
+		fmt.Println("4. Set Geofence Radius")
+		fmt.Println("5. Configure Temperatures")
+		fmt.Println("6. Simulate Location Update")
+		fmt.Println("7. Simulate Random Movement")
+		fmt.Println("8. View Presence History")
+		fmt.Println("0. Back to Main Menu")
+		fmt.Print("Choice: ")
+		
+		choice, _ := reader.ReadString('\n')
+		choice = strings.TrimSpace(choice)
+		
+		switch choice {
+		case "1":
+			err := EnableGeofencing(currentUser)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			} else {
+				fmt.Println("Geofencing enabled successfully!")
+			}
+			
+		case "2":
+			err := DisableGeofencing(currentUser)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			} else {
+				fmt.Println("Geofencing disabled.")
+			}
+			
+		case "3":
+			fmt.Print("Home Latitude (-90 to 90): ")
+			latStr, _ := reader.ReadString('\n')
+			latStr = strings.TrimSpace(latStr)
+			lat, err := strconv.ParseFloat(latStr, 64)
+			if err != nil {
+				fmt.Println("Invalid latitude")
+				continue
+			}
+			
+			fmt.Print("Home Longitude (-180 to 180): ")
+			lonStr, _ := reader.ReadString('\n')
+			lonStr = strings.TrimSpace(lonStr)
+			lon, err := strconv.ParseFloat(lonStr, 64)
+			if err != nil {
+				fmt.Println("Invalid longitude")
+				continue
+			}
+			
+			err = SetHomeLocation(lat, lon, currentUser)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			} else {
+				fmt.Printf("Home location set to %.4f, %.4f\n", lat, lon)
+			}
+			
+		case "4":
+			fmt.Print("Geofence Radius (0.1-50 km): ")
+			radiusStr, _ := reader.ReadString('\n')
+			radiusStr = strings.TrimSpace(radiusStr)
+			radius, err := strconv.ParseFloat(radiusStr, 64)
+			if err != nil {
+				fmt.Println("Invalid radius")
+				continue
+			}
+			
+			err = SetGeofenceRadius(radius, currentUser)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			} else {
+				fmt.Printf("Geofence radius set to %.1f km\n", radius)
+			}
+			
+		case "5":
+			fmt.Print("Home Temperature (10-35°C): ")
+			homeTempStr, _ := reader.ReadString('\n')
+			homeTempStr = strings.TrimSpace(homeTempStr)
+			homeTemp, err := strconv.ParseFloat(homeTempStr, 64)
+			if err != nil {
+				fmt.Println("Invalid temperature")
+				continue
+			}
+			
+			fmt.Print("Away Temperature (10-35°C): ")
+			awayTempStr, _ := reader.ReadString('\n')
+			awayTempStr = strings.TrimSpace(awayTempStr)
+			awayTemp, err := strconv.ParseFloat(awayTempStr, 64)
+			if err != nil {
+				fmt.Println("Invalid temperature")
+				continue
+			}
+			
+			fmt.Print("Coming Home Temperature (10-35°C): ")
+			comingTempStr, _ := reader.ReadString('\n')
+			comingTempStr = strings.TrimSpace(comingTempStr)
+			comingTemp, err := strconv.ParseFloat(comingTempStr, 64)
+			if err != nil {
+				fmt.Println("Invalid temperature")
+				continue
+			}
+			
+			err = SetGeofenceTemperatures(homeTemp, awayTemp, comingTemp, currentUser)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			} else {
+				fmt.Println("Geofence temperatures configured successfully!")
+			}
+			
+		case "6":
+			fmt.Print("Current Latitude: ")
+			latStr, _ := reader.ReadString('\n')
+			latStr = strings.TrimSpace(latStr)
+			lat, err := strconv.ParseFloat(latStr, 64)
+			if err != nil {
+				fmt.Println("Invalid latitude")
+				continue
+			}
+			
+			fmt.Print("Current Longitude: ")
+			lonStr, _ := reader.ReadString('\n')
+			lonStr = strings.TrimSpace(lonStr)
+			lon, err := strconv.ParseFloat(lonStr, 64)
+			if err != nil {
+				fmt.Println("Invalid longitude")
+				continue
+			}
+			
+			err = SimulateLocationUpdate(lat, lon, currentUser)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			} else {
+				fmt.Println("Location updated successfully!")
+				// Show updated status
+				config, _ := GetGeofenceConfig()
+				if config != nil {
+					distance := CalculateDistance(
+						config.HomeLatitude, config.HomeLongitude,
+						lat, lon)
+					fmt.Printf("Distance from home: %.2f km\n", distance)
+					fmt.Printf("Current status: %s\n", config.CurrentStatus)
+				}
+			}
+			
+		case "7":
+			err := SimulateRandomMovement(currentUser)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			} else {
+				fmt.Println("Random movement simulated!")
+				// Show updated status
+				config, _ := GetGeofenceConfig()
+				if config != nil {
+					distance := CalculateDistance(
+						config.HomeLatitude, config.HomeLongitude,
+						config.SimulatedLatitude, config.SimulatedLongitude)
+					fmt.Printf("New location: %.4f, %.4f\n", config.SimulatedLatitude, config.SimulatedLongitude)
+					fmt.Printf("Distance from home: %.2f km\n", distance)
+					fmt.Printf("Current status: %s\n", config.CurrentStatus)
+				}
+			}
+			
+		case "8":
+			events, err := GetPresenceHistory(20)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			} else {
+				fmt.Println("\n" + DisplayPresenceHistory(events))
 			}
 			
 		case "0":
