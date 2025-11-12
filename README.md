@@ -27,6 +27,28 @@ A secure-by-design smart thermostat implementation in Go with comprehensive OWAS
 - **Guest Management**: Temporary access with PIN-based authentication
 - **Technician Access**: Time-limited diagnostic access
 
+### **NEW** Smart Features (Real-Life Enhancements)
+
+1. **Vacation/Away Mode** - Energy-saving mode for extended absences
+   - Set return date and time for automatic restoration
+   - Automatically adjusts temperature to eco-friendly settings
+   - Restores previous HVAC settings upon return
+   - Background monitoring for automatic mode deactivation
+
+2. **Filter Maintenance Tracking** - Intelligent filter replacement reminders
+   - Tracks HVAC runtime hours automatically
+   - Configurable maintenance intervals (default: 720 hours / ~30 days)
+   - Sends alerts when filter replacement is due
+   - Easy reset after filter changes
+   - Prevents system inefficiency from clogged filters
+
+3. **Eco Mode** - Energy-efficient temperature optimization
+   - Allows temperature variance of ±2°C from target (vs ±1°C standard)
+   - Reduces HVAC cycling frequency for energy savings
+   - Tracks energy saved and cost savings
+   - Shows real-time statistics (kWh saved, cycles avoided)
+   - Easily toggle on/off from menu
+
 ### Security Features (OWASP Top 10 Coverage)
 
 1. **Broken Access Control** - Role-based permissions, session validation
@@ -102,7 +124,7 @@ go build -o thermostat
 
 ### Main Menu Options
 
-1. **View Current Status** - Display HVAC mode, temperatures, system state
+1. **View Current Status** - Display HVAC mode, temperatures, system state, eco mode status
 2. **Set Target Temperature** - Change desired temperature (10-35°C)
 3. **Change HVAC Mode** - Switch between Off/Heat/Cool/Fan
 4. **View Sensor Readings** - Check temperature, humidity, CO levels
@@ -114,6 +136,9 @@ go build -o thermostat
 10. **View Audit Logs** - Security and system event logs
 11. **Change Password** - Update user password
 12. **Logout** - End current session
+13. **Vacation/Away Mode** - Set energy-saving mode for extended absences (homeowner only)
+14. **Filter Maintenance** - View filter status and reset after replacement (homeowner only)
+15. **Eco Mode Settings** - Enable/disable energy optimization mode (homeowner only)
 
 ---
 
@@ -131,11 +156,13 @@ smart-thermostat-security/
 ├── sensor.go            \# Sensor data collection (Krishita)
 ├── weather.go           \# Weather data integration (Krishita)
 ├── diagnostics.go       \# System diagnostics (Krishita)
-├── hvac.go              \# HVAC control logic (Dahyun)
+├── hvac.go              \# HVAC control logic with Eco Mode (Dahyun)
 ├── profile.go           \# Profile \& schedule management (Dahyun)
 ├── energy.go            \# Energy tracking \& reporting (Dahyun)
 ├── security.go          \# Security utilities \& validation (Nina)
 ├── notifications.go     \# Alert \& notification system (Nina)
+├── away_mode.go         \# **NEW** Vacation/away mode feature
+├── maintenance.go       \# **NEW** Filter maintenance tracking
 ├── go.mod               \# Go module dependencies
 ├── thermostat.db        \# SQLite database (auto-created)
 └── README.md            \# This file
@@ -152,6 +179,9 @@ smart-thermostat-security/
 - `energy_logs` - HVAC runtime and energy usage
 - `guest_access` - Guest and technician access grants
 - `sensor_readings` - Historical sensor data
+- `hvac_state` - HVAC operational history
+- `away_mode` - **NEW** Vacation/away mode settings and history
+- `maintenance` - **NEW** Filter maintenance tracking and alerts
 - `hvac_state` - HVAC operational history
 
 ---
@@ -227,6 +257,90 @@ go test ./...
 
 ---
 
+## New Smart Features Guide
+
+### Vacation/Away Mode
+
+The Away Mode feature allows homeowners to set the thermostat to energy-saving mode during extended absences (vacations, business trips, etc.).
+
+**How to Use:**
+1. From the main menu, select option **13. Vacation/Away Mode**
+2. Choose **Activate Away Mode**
+3. Enter your return date and time
+4. Set an energy-efficient away temperature (e.g., 15°C for winter, 28°C for summer)
+5. The system will automatically restore your previous settings when you return
+
+**Benefits:**
+- Reduces energy consumption while you're away
+- Automatic restoration of settings at scheduled return time
+- No manual intervention needed upon return
+- Maintains minimum system protection (prevents freezing/overheating)
+
+**Security:** Only homeowners can activate/deactivate away mode to prevent unauthorized changes.
+
+---
+
+### Filter Maintenance Tracking
+
+This feature automatically tracks your HVAC filter usage based on runtime hours and alerts you when replacement is needed.
+
+**How to Use:**
+1. From the main menu, select option **14. Filter Maintenance**
+2. View current filter status (runtime hours, life remaining, etc.)
+3. After replacing the filter, select **Reset Filter** to restart tracking
+4. Optionally, customize the filter change interval (default: 720 hours)
+
+**Features:**
+- Automatic runtime tracking based on HVAC operation
+- Warning alerts when filter life is low (< 50 hours remaining)
+- Critical alerts when filter is overdue for replacement
+- Configurable maintenance intervals for different filter types
+- Tracks days since last installation
+
+**Why It Matters:**
+- Dirty filters reduce HVAC efficiency and increase energy costs
+- Can damage HVAC equipment if neglected
+- Affects indoor air quality
+- System automatically reminds you, so you never forget
+
+---
+
+### Eco Mode
+
+Eco Mode optimizes your thermostat for energy efficiency by allowing wider temperature variance while maintaining comfort.
+
+**How to Use:**
+1. From the main menu, select option **15. Eco Mode Settings**
+2. Choose **Enable Eco Mode** to activate
+3. View real-time statistics on energy saved
+4. Disable when you want precise temperature control
+
+**How It Works:**
+- **Standard Mode:** Maintains temperature within ±1°C of target
+- **Eco Mode:** Allows temperature to vary ±2°C from target
+- Reduces HVAC cycling frequency (fewer starts/stops)
+- Each avoided cycle saves approximately 0.15-0.18 kWh
+
+**Real-Time Statistics:**
+- Active duration (hours and minutes)
+- Total energy saved (kWh)
+- Number of HVAC cycles avoided
+- Estimated cost savings (based on $0.12/kWh)
+
+**Example Savings:**
+- Running eco mode for 30 days could save 10-15 kWh
+- That's approximately $1.20-$1.80 per month
+- Extrapolated annually: $14-$22 in savings
+- Reduces wear on HVAC components
+
+**Best Use Cases:**
+- Times when you're flexible about exact temperature
+- Overnight (sleeping comfort zone is wider)
+- During mild weather when HVAC cycles frequently
+- When maximizing energy efficiency is a priority
+
+---
+
 ## Known Limitations
 
 1. **Simulated Sensors**: Current implementation uses random data generation
@@ -243,11 +357,15 @@ go test ./...
 - [ ] Real sensor hardware integration
 - [ ] Cloud synchronization
 - [ ] Machine learning for temperature prediction
-- [ ] Geofencing for automatic away mode
-- [ ] Email/SMS notifications
+- [x] ~~Geofencing for automatic away mode~~ - **Implemented as Vacation/Away Mode**
+- [ ] Email/SMS notifications (console notifications implemented)
 - [ ] Two-factor authentication
 - [ ] API rate limiting
 - [ ] Encrypted database fields
+- [ ] Smart pre-heating/cooling based on occupancy patterns
+- [ ] Multi-zone temperature control
+- [ ] Integration with smart home ecosystems (Alexa, Google Home)
+- [ ] Historical temperature analytics and charts
 
 ---
 
