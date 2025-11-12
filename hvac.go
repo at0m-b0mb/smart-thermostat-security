@@ -28,6 +28,7 @@ var (
     hvacMutex sync.RWMutex
     hvacState HVACState
     startTime time.Time
+    lastEnergyLog time.Time
 )
 
 func InitializeHVAC() error {
@@ -99,7 +100,10 @@ func UpdateHVACLogic() error {
     }
     hvacState.CurrentTemp = currentTemp
     if hvacState.Mode == ModeOff {
-        hvacState.IsRunning = false
+        if hvacState.IsRunning {
+            logRuntime()
+            hvacState.IsRunning = false
+        }
         return nil
     }
     if hvacState.Mode == ModeHeat {
@@ -108,6 +112,9 @@ func UpdateHVACLogic() error {
                 hvacState.IsRunning = true
                 startTime = time.Now()
                 LogEvent("hvac_start", "Heating started", "system", "info")
+            } else {
+                // Log periodic energy for long-running operations
+                logPeriodicRuntime()
             }
         } else if currentTemp > hvacState.TargetTemp+0.5 {
             if hvacState.IsRunning {
@@ -122,6 +129,9 @@ func UpdateHVACLogic() error {
                 hvacState.IsRunning = true
                 startTime = time.Now()
                 LogEvent("hvac_start", "Cooling started", "system", "info")
+            } else {
+                // Log periodic energy for long-running operations
+                logPeriodicRuntime()
             }
         } else if currentTemp < hvacState.TargetTemp-0.5 {
             if hvacState.IsRunning {
@@ -131,7 +141,14 @@ func UpdateHVACLogic() error {
             }
         }
     } else if hvacState.Mode == ModeFan {
-        hvacState.IsRunning = true
+        if !hvacState.IsRunning {
+            hvacState.IsRunning = true
+            startTime = time.Now()
+            LogEvent("hvac_start", "Fan started", "system", "info")
+        } else {
+            // Log periodic energy for fan mode
+            logPeriodicRuntime()
+        }
     }
     hvacState.LastUpdate = time.Now()
     return nil
@@ -140,9 +157,33 @@ func UpdateHVACLogic() error {
 func logRuntime() {
     if !startTime.IsZero() {
         runtime := int(time.Since(startTime).Minutes())
-        kwh := estimateEnergyUsage(hvacState.Mode, runtime)
-        db.Exec("INSERT INTO energy_logs (hvac_mode, runtime_minutes, estimated_kwh) VALUES (?, ?, ?)",
-            hvacState.Mode, runtime, kwh)
+        if runtime > 0 {
+            kwh := estimateEnergyUsage(hvacState.Mode, runtime)
+            db.Exec("INSERT INTO energy_logs (hvac_mode, runtime_minutes, estimated_kwh) VALUES (?, ?, ?)",
+                hvacState.Mode, runtime, kwh)
+            LogEvent("energy_track", fmt.Sprintf("Tracked %.2f kWh for %s mode (%d minutes)", kwh, hvacState.Mode, runtime), "system", "info")
+        }
+        startTime = time.Time{} // Reset startTime
+        lastEnergyLog = time.Time{} // Reset last log time
+    }
+}
+
+func logPeriodicRuntime() {
+    if !startTime.IsZero() {
+        // Only log every 2 minutes to avoid too many small entries
+        timeSinceLastLog := time.Since(lastEnergyLog)
+        if lastEnergyLog.IsZero() || timeSinceLastLog >= 2*time.Minute {
+            runtime := int(time.Since(startTime).Minutes())
+            if runtime > 0 {
+                kwh := estimateEnergyUsage(hvacState.Mode, runtime)
+                db.Exec("INSERT INTO energy_logs (hvac_mode, runtime_minutes, estimated_kwh) VALUES (?, ?, ?)",
+                    hvacState.Mode, runtime, kwh)
+                LogEvent("energy_track", fmt.Sprintf("Tracked %.2f kWh for %s mode (%d minutes)", kwh, hvacState.Mode, runtime), "system", "info")
+                // Reset startTime to track next period
+                startTime = time.Now()
+                lastEnergyLog = time.Now()
+            }
+        }
     }
 }
 
