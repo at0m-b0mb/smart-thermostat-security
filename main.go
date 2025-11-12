@@ -124,102 +124,101 @@ func runCLI() {
 }
 
 func displayMenu() {
-    fmt.Println("\n=== MAIN MENU ===")
-    fmt.Println("1.  View Current Status")
-	
+	fmt.Println("\n=== MAIN MENU ===")
+	fmt.Println("1.  View Current Status")
+
 	if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
-  		fmt.Println("2.  Set Target Temperature")    
+		fmt.Println("2.  Set Target Temperature")
 	}
-  
-    fmt.Println("3.  Change HVAC Mode")
-    fmt.Println("4.  View Sensor Readings")
-    fmt.Println("5.  View Weather")
 
-    // Homeowner and technician can view energy usage
-    if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
-        fmt.Println("6.  View Energy Usage")
-        fmt.Println("7.  Manage Profiles")
-        fmt.Println("8.  Manage Users")
-        fmt.Println("9.  Run Diagnostics")
-    } else {
-        // For guests, allow only these:
-        fmt.Println("6.  Manage Profiles")
-    }
+	fmt.Println("3.  Change HVAC Mode")
+	fmt.Println("4.  View Sensor Readings")
+	fmt.Println("5.  View Weather")
 
-    // Only homeowner can view audit logs
-    if currentUser.Role == "homeowner" {
-        fmt.Println("10. View Audit Logs")
-    }
+	// Homeowner and technician can view energy usage
+	if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
+		fmt.Println("6.  View Energy Usage")
+		fmt.Println("7.  Manage Profiles")
+		fmt.Println("8.  Manage Users")
+		fmt.Println("9.  Run Diagnostics")
+	} else {
+		// For guests, allow only these:
+		fmt.Println("6.  Manage Profiles")
+	}
 
-    fmt.Println("11. Change Password")
-    fmt.Println("12. Logout")
-    fmt.Println("0.  Exit")
+	// Only homeowner can view audit logs
+	if currentUser.Role == "homeowner" {
+		fmt.Println("10. View Audit Logs")
+	}
+
+	fmt.Println("11. Change Password")
+	fmt.Println("12. Logout")
+	fmt.Println("0.  Exit")
 }
 
 func handleMenuChoice(choice string, reader *bufio.Reader) {
-    switch choice {
-    case "1":
-        viewCurrentStatus()
-    case "2":
+	switch choice {
+	case "1":
+		viewCurrentStatus()
+	case "2":
 		if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
-        	setTargetTemperature(reader)
-        } else {
-            fmt.Println("Invalid choice")
-        }
-    case "3":
-        changeHVACMode(reader)
-    case "4":
-        viewSensorReadings()
-    case "5":
-        viewWeather(reader)
+			setTargetTemperature(reader)
+		} else {
+			fmt.Println("Invalid choice")
+		}
+	case "3":
+		changeHVACMode(reader)
+	case "4":
+		viewSensorReadings()
+	case "5":
+		viewWeather(reader)
 
-    // Homeowner or technician only
-    case "6":
-        if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
-            viewEnergyUsage(reader)
-        } else if currentUser.Role == "guest" {
-            manageProfiles(reader, currentUser)
-        } else {
-            fmt.Println("Invalid choice")
-        }
+	// Homeowner or technician only
+	case "6":
+		if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
+			viewEnergyUsage(reader)
+		} else if currentUser.Role == "guest" {
+			manageProfiles(reader, currentUser)
+		} else {
+			fmt.Println("Invalid choice")
+		}
 
-    case "7":
-        if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
-            manageProfiles(reader, currentUser)
-        } else {
-            fmt.Println("Invalid choice")
-        }
-    case "8":
-        if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
-            manageUsers(reader)
-        } else {
-            fmt.Println("Invalid choice")
-        }
-    case "9":
-        if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
-            runDiagnostics()
-        } else {
-            fmt.Println("Invalid choice")
-        }
-    case "10":
-        if currentUser.Role == "homeowner" {
-            viewAuditLogs()
-        } else {
-            fmt.Println("Invalid choice")
-        }
-    case "11":
-        changePasswordCLI(reader)
-    case "12":
-        logout()
-    case "0":
-        fmt.Println("Goodbye!")
-        CloseDatabase()
-        os.Exit(0)
-    default:
-        fmt.Println("Invalid choice")
-    }
+	case "7":
+		if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
+			manageProfiles(reader, currentUser)
+		} else {
+			fmt.Println("Invalid choice")
+		}
+	case "8":
+		if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
+			manageUsers(reader)
+		} else {
+			fmt.Println("Invalid choice")
+		}
+	case "9":
+		if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
+			runDiagnostics()
+		} else {
+			fmt.Println("Invalid choice")
+		}
+	case "10":
+		if currentUser.Role == "homeowner" {
+			viewAuditLogs()
+		} else {
+			fmt.Println("Invalid choice")
+		}
+	case "11":
+		changePasswordCLI(reader)
+	case "12":
+		logout()
+	case "0":
+		fmt.Println("Goodbye!")
+		CloseDatabase()
+		os.Exit(0)
+	default:
+		fmt.Println("Invalid choice")
+	}
 }
-
 
 func viewCurrentStatus() {
 	fmt.Println("\n=== CURRENT SYSTEM STATUS ===")
@@ -240,7 +239,7 @@ func setTargetTemperature(reader *bufio.Reader) {
 		fmt.Println("Invalid temperature")
 		return
 	}
-		
+
 	// Validate temperature using security.go function
 	if err := ValidateTemperatureInput(temp); err != nil {
 		fmt.Printf("Security validation failed: %v\n", err)
@@ -322,58 +321,58 @@ func viewEnergyUsage(reader *bufio.Reader) {
 }
 
 func manageProfiles(reader *bufio.Reader, currentUser *User) {
-    for {
-        fmt.Println("\n=== PROFILE MANAGEMENT ===")
-        fmt.Println("1. List Profiles")
-        fmt.Println("2. Apply Profile")
-        if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
-            fmt.Println("3. Create Profile")
-            fmt.Println("4. Delete Profile")
-            fmt.Println("5. Add Schedule")
+	for {
+		fmt.Println("\n=== PROFILE MANAGEMENT ===")
+		fmt.Println("1. List Profiles")
+		fmt.Println("2. Apply Profile")
+		if currentUser.Role == "homeowner" || currentUser.Role == "technician" {
+			fmt.Println("3. Create Profile")
+			fmt.Println("4. Delete Profile")
+			fmt.Println("5. Add Schedule")
 			fmt.Println("6. View Schedules")
 
-        }
-        fmt.Println("0. Back to Main Menu")
-        fmt.Print("Enter choice: ")
+		}
+		fmt.Println("0. Back to Main Menu")
+		fmt.Print("Enter choice: ")
 
-        choice, _ := reader.ReadString('\n')
-        choice = strings.TrimSpace(choice)
+		choice, _ := reader.ReadString('\n')
+		choice = strings.TrimSpace(choice)
 
-        switch choice {
-        case "1":
-            listProfiles(reader)
-        case "2":
-            applyProfile(reader)
-        case "3":
-            if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
-                fmt.Println("Invalid choice")
-                continue
-            }
-            createProfile(reader)
-        case "4":
-            if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
-                fmt.Println("Invalid choice")
-                continue
-            }
-            deleteProfile(reader)
-        case "5":
-            if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
-                fmt.Println("Invalid choice")
-                continue
-            }
-            addSchedule(reader)
-        case "6":
-            if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
-                fmt.Println("Invalid choice")
-                continue
-            }
-            viewSchedules(reader)
-        case "0":
-            return
-        default:
-            fmt.Println("Invalid choice")
-        }
-    }
+		switch choice {
+		case "1":
+			listProfiles(reader)
+		case "2":
+			applyProfile(reader)
+		case "3":
+			if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
+				fmt.Println("Invalid choice")
+				continue
+			}
+			createProfile(reader)
+		case "4":
+			if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
+				fmt.Println("Invalid choice")
+				continue
+			}
+			deleteProfile(reader)
+		case "5":
+			if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
+				fmt.Println("Invalid choice")
+				continue
+			}
+			addSchedule(reader)
+		case "6":
+			if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
+				fmt.Println("Invalid choice")
+				continue
+			}
+			viewSchedules(reader)
+		case "0":
+			return
+		default:
+			fmt.Println("Invalid choice")
+		}
+	}
 }
 
 func listProfiles(reader *bufio.Reader) {
@@ -385,50 +384,48 @@ func listProfiles(reader *bufio.Reader) {
 	fmt.Println("Name    | Temp (°C) | Mode | Guest Accessible")
 	fmt.Println("-----------------------------------------------")
 	for _, p := range profiles {
-	    guest := "No"
-	    if p.GuestAccessible == 1 {
-	        guest = "Yes"
-	    }
-	    fmt.Printf("%-8s | %9.1f | %-4s | %-15s\n", p.Name, p.TargetTemp, p.HVACMode, guest)
+		guest := "No"
+		if p.GuestAccessible == 1 {
+			guest = "Yes"
+		}
+		fmt.Printf("%-8s | %9.1f | %-4s | %-15s\n", p.Name, p.TargetTemp, p.HVACMode, guest)
 	}
 }
 
-
 func createProfile(reader *bufio.Reader) {
-    fmt.Print("Profile name: ")
-    name, _ := reader.ReadString('\n')
-    name = strings.TrimSpace(name)
+	fmt.Print("Profile name: ")
+	name, _ := reader.ReadString('\n')
+	name = strings.TrimSpace(name)
 
-    fmt.Print("Target temperature (10-35°C): ")
-    tempStr, _ := reader.ReadString('\n')
-    temp, err := strconv.ParseFloat(strings.TrimSpace(tempStr), 64)
-    if err != nil {
-        fmt.Println("Invalid temperature")
-        return
-    }
+	fmt.Print("Target temperature (10-35°C): ")
+	tempStr, _ := reader.ReadString('\n')
+	temp, err := strconv.ParseFloat(strings.TrimSpace(tempStr), 64)
+	if err != nil {
+		fmt.Println("Invalid temperature")
+		return
+	}
 
-    // FIX: Add this section to get HVAC mode!
-    fmt.Print("HVAC mode (off/heat/cool/fan): ")
-    mode, _ := reader.ReadString('\n')
-    mode = strings.TrimSpace(mode)
+	// FIX: Add this section to get HVAC mode!
+	fmt.Print("HVAC mode (off/heat/cool/fan): ")
+	mode, _ := reader.ReadString('\n')
+	mode = strings.TrimSpace(mode)
 
-    // New: prompt for guest accessibility
-    fmt.Print("Allow guests to view/apply this profile? (yes/no): ")
-    guestInput, _ := reader.ReadString('\n')
-    guestInput = strings.TrimSpace(strings.ToLower(guestInput))
-    guestAccessible := 0
-    if guestInput == "yes" || guestInput == "y" {
-        guestAccessible = 1
-    }
+	// New: prompt for guest accessibility
+	fmt.Print("Allow guests to view/apply this profile? (yes/no): ")
+	guestInput, _ := reader.ReadString('\n')
+	guestInput = strings.TrimSpace(strings.ToLower(guestInput))
+	guestAccessible := 0
+	if guestInput == "yes" || guestInput == "y" {
+		guestAccessible = 1
+	}
 
-    // Call CreateProfile with the new parameter
-    if err := CreateProfile(name, temp, mode, currentUser.Username, currentUser, guestAccessible); err != nil {
-        fmt.Printf("Error: %v\n", err)
-        return
-    }
-    fmt.Println("Profile created successfully")
+	// Call CreateProfile with the new parameter
+	if err := CreateProfile(name, temp, mode, currentUser.Username, currentUser, guestAccessible); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	fmt.Println("Profile created successfully")
 }
-
 
 func applyProfile(reader *bufio.Reader) {
 	fmt.Print("Profile name: ")
@@ -455,219 +452,216 @@ func deleteProfile(reader *bufio.Reader) {
 }
 
 func addSchedule(reader *bufio.Reader) {
-    fmt.Print("Profile ID: ")
-    profileIDStr, _ := reader.ReadString('\n')
-    profileID, _ := strconv.Atoi(strings.TrimSpace(profileIDStr))
-    fmt.Print("Day of Week (0=Sun, 6=Sat): ")
-    dayStr, _ := reader.ReadString('\n')
-    dayOfWeek, _ := strconv.Atoi(strings.TrimSpace(dayStr))
-    fmt.Print("Start Time (HH:MM): ")
-    startTime, _ := reader.ReadString('\n')
-    startTime = strings.TrimSpace(startTime)
-    fmt.Print("End Time (HH:MM): ")
-    endTime, _ := reader.ReadString('\n')
-    endTime = strings.TrimSpace(endTime)
-    fmt.Print("Target Temperature (Celsius): ")
-    targetStr, _ := reader.ReadString('\n')
-    targetTemp, _ := strconv.ParseFloat(strings.TrimSpace(targetStr), 64)
+	fmt.Print("Profile ID: ")
+	profileIDStr, _ := reader.ReadString('\n')
+	profileID, _ := strconv.Atoi(strings.TrimSpace(profileIDStr))
+	fmt.Print("Day of Week (0=Sun, 6=Sat): ")
+	dayStr, _ := reader.ReadString('\n')
+	dayOfWeek, _ := strconv.Atoi(strings.TrimSpace(dayStr))
+	fmt.Print("Start Time (HH:MM): ")
+	startTime, _ := reader.ReadString('\n')
+	startTime = strings.TrimSpace(startTime)
+	fmt.Print("End Time (HH:MM): ")
+	endTime, _ := reader.ReadString('\n')
+	endTime = strings.TrimSpace(endTime)
+	fmt.Print("Target Temperature (Celsius): ")
+	targetStr, _ := reader.ReadString('\n')
+	targetTemp, _ := strconv.ParseFloat(strings.TrimSpace(targetStr), 64)
 
-    err := AddSchedule(profileID, dayOfWeek, startTime, endTime, targetTemp, currentUser)
-    if err != nil {
-        fmt.Printf("Error adding schedule: %v\n", err)
-    } else {
-        fmt.Println("Schedule added successfully.")
-    }
+	err := AddSchedule(profileID, dayOfWeek, startTime, endTime, targetTemp, currentUser)
+	if err != nil {
+		fmt.Printf("Error adding schedule: %v\n", err)
+	} else {
+		fmt.Println("Schedule added successfully.")
+	}
 }
 
 func viewSchedules(reader *bufio.Reader) {
-    fmt.Print("Profile ID: ")
-    profileIDStr, _ := reader.ReadString('\n')
-    profileID, _ := strconv.Atoi(strings.TrimSpace(profileIDStr))
+	fmt.Print("Profile ID: ")
+	profileIDStr, _ := reader.ReadString('\n')
+	profileID, _ := strconv.Atoi(strings.TrimSpace(profileIDStr))
 
-    schedules, err := GetSchedules(profileID, currentUser)
-    if err != nil {
-        fmt.Printf("Error retrieving schedules: %v\n", err)
-        return
-    }
-    if len(schedules) == 0 {
-        fmt.Println("No schedules found for this profile.")
-        return
-    }
-    fmt.Println("Schedules for this profile:")
-    for _, s := range schedules {
-        fmt.Printf("Day %d: %s - %s, Target: %.1f°C\n", s.DayOfWeek, s.StartTime, s.EndTime, s.TargetTemp)
-    }
+	schedules, err := GetSchedules(profileID, currentUser)
+	if err != nil {
+		fmt.Printf("Error retrieving schedules: %v\n", err)
+		return
+	}
+	if len(schedules) == 0 {
+		fmt.Println("No schedules found for this profile.")
+		return
+	}
+	fmt.Println("Schedules for this profile:")
+	for _, s := range schedules {
+		fmt.Printf("Day %d: %s - %s, Target: %.1f°C\n", s.DayOfWeek, s.StartTime, s.EndTime, s.TargetTemp)
+	}
 }
 
-
 func manageUsers(reader *bufio.Reader) {
-    if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
-        fmt.Println("Only homeowners or technicians can manage users")
-        return
-    }
-    
-    for {
-        fmt.Println("\n=== USER MANAGEMENT ===")
-        fmt.Println("1. Create Guest Account")
-        
-        // Only show "Create Technician" option to homeowners
-        if currentUser.Role == "homeowner" {
-            fmt.Println("2. Create Technician Account")
-            fmt.Println("3. Grant/Extend Technician Access")
-        }
-        
-        fmt.Println("4. Revoke User Access")
-        
-        // Only show "List All Users" to homeowners
-        if currentUser.Role == "homeowner" {
-            fmt.Println("5. List All Users")
+	if currentUser.Role != "homeowner" && currentUser.Role != "technician" {
+		fmt.Println("Only homeowners or technicians can manage users")
+		return
+	}
+
+	for {
+		fmt.Println("\n=== USER MANAGEMENT ===")
+		fmt.Println("1. Create Guest Account")
+
+		// Only show "Create Technician" option to homeowners
+		if currentUser.Role == "homeowner" {
+			fmt.Println("2. Create Technician Account")
+			fmt.Println("3. Grant/Extend Technician Access")
+		}
+
+		fmt.Println("4. Revoke User Access")
+
+		// Only show "List All Users" to homeowners
+		if currentUser.Role == "homeowner" {
+			fmt.Println("5. List All Users")
 			fmt.Println("6. Permanently Delete User")
-        }
-        
-        fmt.Println("0. Back to Main Menu")
-        fmt.Print("Enter choice: ")
-        
-        choice, _ := reader.ReadString('\n')
-        choice = strings.TrimSpace(choice)
-        
-        switch choice {
-        case "1":
-            // Create guest account - both homeowner and technician allowed
-            fmt.Print("Guest name: ")
-            guestName, _ := reader.ReadString('\n')
-            guestName = strings.TrimSpace(guestName)
-            
-            fmt.Print("PIN (minimum 4 digits): ")
-            pin, _ := reader.ReadString('\n')
-            pin = strings.TrimSpace(pin)
-            
-            err := CreateGuestAccount(currentUser.Username, guestName, pin, currentUser.Role)
-            if err != nil {
-                fmt.Printf("Error: %v\n", err)
-            } else {
-                fmt.Println("Guest account created successfully")
-            }
-            
-        case "2":
-            // Create technician account - only homeowners
-            if currentUser.Role != "homeowner" {
-                fmt.Println("Invalid choice")
-                continue
-            }
-            
-            fmt.Print("Technician username: ")
-            techName, _ := reader.ReadString('\n')
-            techName = strings.TrimSpace(techName)
-            
-            fmt.Print("Password (minimum 4 characters): ")
-            password, _ := reader.ReadString('\n')
-            password = strings.TrimSpace(password)
-            
-            err := CreateTechnicianAccount(currentUser.Username, techName, password, currentUser.Role)
-            if err != nil {
-                fmt.Printf("Error: %v\n", err)
-            } else {
-                fmt.Println("Technician account created successfully")
-            }
-            
-        case "3":
-            // Grant technician access - only homeowners
-            if currentUser.Role != "homeowner" {
-                fmt.Println("Invalid choice")
-                continue
-            }
-            
-            fmt.Print("Technician username: ")
-            techName, _ := reader.ReadString('\n')
-            techName = strings.TrimSpace(techName)
-            
-            fmt.Print("Duration in hours: ")
-            durationStr, _ := reader.ReadString('\n')
-            durationStr = strings.TrimSpace(durationStr)
-            hours, err := strconv.Atoi(durationStr)
-            if err != nil {
-                fmt.Println("Invalid duration")
-                continue
-            }
-            duration := time.Duration(hours) * time.Hour
-            
-            err = GrantTechnicianAccess(currentUser.Username, techName, duration, currentUser.Role)
-            if err != nil {
-                fmt.Printf("Error: %v\n", err)
-            } else {
-                fmt.Println("Technician access granted successfully")
-            }
-            
-        case "4":
-            // Revoke user access - both homeowner and technician (with restrictions)
-            fmt.Print("Username to revoke: ")
-            username, _ := reader.ReadString('\n')
-            username = strings.TrimSpace(username)
-            
-            err := RevokeAccess(username, currentUser.Username, currentUser.Role)
-            if err != nil {
-                fmt.Printf("Error: %v\n", err)
-            } else {
-                fmt.Println("User access revoked successfully")
-            }
-            
-        case "5":
-            // List all users - only homeowners
-            if currentUser.Role != "homeowner" {
-                fmt.Println("Invalid choice")
-                continue
-            }
-            
-            users, err := ListAllUsers(currentUser.Role)
-            if err != nil {
-                fmt.Printf("Error: %v\n", err)
-                continue
-            }
-            
-            fmt.Println("\n=== ALL USERS ===")
-            for _, u := range users {
-                status := "Active"
-                if !u.IsActive {
-                    status = "Inactive"
-                }
-                fmt.Printf("ID: %d | Username: %s | Role: %s | Status: %s\n", u.ID, u.Username, u.Role, status)
-            }
+		}
+
+		fmt.Println("0. Back to Main Menu")
+		fmt.Print("Enter choice: ")
+
+		choice, _ := reader.ReadString('\n')
+		choice = strings.TrimSpace(choice)
+
+		switch choice {
+		case "1":
+			// Create guest account - both homeowner and technician allowed
+			fmt.Print("Guest name: ")
+			guestName, _ := reader.ReadString('\n')
+			guestName = strings.TrimSpace(guestName)
+
+			fmt.Print("PIN (minimum 4 digits): ")
+			pin, _ := reader.ReadString('\n')
+			pin = strings.TrimSpace(pin)
+
+			err := CreateGuestAccount(currentUser.Username, guestName, pin, currentUser.Role)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			} else {
+				fmt.Println("Guest account created successfully")
+			}
+
+		case "2":
+			// Create technician account - only homeowners
+			if currentUser.Role != "homeowner" {
+				fmt.Println("Invalid choice")
+				continue
+			}
+
+			fmt.Print("Technician username: ")
+			techName, _ := reader.ReadString('\n')
+			techName = strings.TrimSpace(techName)
+
+			fmt.Print("Password (minimum 4 characters): ")
+			password, _ := reader.ReadString('\n')
+			password = strings.TrimSpace(password)
+
+			err := CreateTechnicianAccount(currentUser.Username, techName, password, currentUser.Role)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			} else {
+				fmt.Println("Technician account created successfully")
+			}
+
+		case "3":
+			// Grant technician access - only homeowners
+			if currentUser.Role != "homeowner" {
+				fmt.Println("Invalid choice")
+				continue
+			}
+
+			fmt.Print("Technician username: ")
+			techName, _ := reader.ReadString('\n')
+			techName = strings.TrimSpace(techName)
+
+			fmt.Print("Duration in hours: ")
+			durationStr, _ := reader.ReadString('\n')
+			durationStr = strings.TrimSpace(durationStr)
+			hours, err := strconv.Atoi(durationStr)
+			if err != nil {
+				fmt.Println("Invalid duration")
+				continue
+			}
+			duration := time.Duration(hours) * time.Hour
+
+			err = GrantTechnicianAccess(currentUser.Username, techName, duration, currentUser.Role)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			} else {
+				fmt.Println("Technician access granted successfully")
+			}
+
+		case "4":
+			// Revoke user access - both homeowner and technician (with restrictions)
+			fmt.Print("Username to revoke: ")
+			username, _ := reader.ReadString('\n')
+			username = strings.TrimSpace(username)
+
+			err := RevokeAccess(username, currentUser.Username, currentUser.Role)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			} else {
+				fmt.Println("User access revoked successfully")
+			}
+
+		case "5":
+			// List all users - only homeowners
+			if currentUser.Role != "homeowner" {
+				fmt.Println("Invalid choice")
+				continue
+			}
+
+			users, err := ListAllUsers(currentUser.Role)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+				continue
+			}
+
+			fmt.Println("\n=== ALL USERS ===")
+			for _, u := range users {
+				status := "Active"
+				if !u.IsActive {
+					status = "Inactive"
+				}
+				fmt.Printf("ID: %d | Username: %s | Role: %s | Status: %s\n", u.ID, u.Username, u.Role, status)
+			}
 
 		case "6":
 			// List all users - only homeowners
-            if currentUser.Role != "homeowner" {
-                fmt.Println("Invalid choice")
-                continue
-            }
+			if currentUser.Role != "homeowner" {
+				fmt.Println("Invalid choice")
+				continue
+			}
 			deleteUser(reader)
-        case "0":
-            return
-            
-        default:
-            fmt.Println("Invalid choice")
-        }
-    }
-}
+		case "0":
+			return
 
+		default:
+			fmt.Println("Invalid choice")
+		}
+	}
+}
 
 // Helper function to list users
 func listUsers() {
-    users, err := ListAllUsers(currentUser.Role)
-    if err != nil {
-        fmt.Printf("Error: %v\n", err)
-        return
-    }
-    
-    fmt.Println("\n=== ALL USERS ===")
-    for _, u := range users {
-        status := "Active"
-        if !u.IsActive {
-            status = "Inactive"
-        }
-        fmt.Printf("ID: %d | Username: %s | Role: %s | Status: %s\n", u.ID, u.Username, u.Role, status)
-    }
-}
+	users, err := ListAllUsers(currentUser.Role)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
 
+	fmt.Println("\n=== ALL USERS ===")
+	for _, u := range users {
+		status := "Active"
+		if !u.IsActive {
+			status = "Inactive"
+		}
+		fmt.Printf("ID: %d | Username: %s | Role: %s | Status: %s\n", u.ID, u.Username, u.Role, status)
+	}
+}
 
 func createGuest(reader *bufio.Reader) {
 	fmt.Print("Guest name: ")
@@ -686,17 +680,17 @@ func createGuest(reader *bufio.Reader) {
 }
 
 func createTechnician(reader *bufio.Reader) {
-    fmt.Print("Technician name: ")
-    name, _ := reader.ReadString('\n')
-    name = strings.TrimSpace(name)
-    fmt.Print("Technician password (min 8 chars): ")
-    password, _ := reader.ReadString('\n')
-    password = strings.TrimSpace(password)
-    if err := CreateTechnicianAccount(currentUser.Username, name, password, currentUser.Role); err != nil {
-        fmt.Printf("Error: %v\n", err)
-        return
-    }
-    fmt.Printf("Technician account created: %s\n", name)
+	fmt.Print("Technician name: ")
+	name, _ := reader.ReadString('\n')
+	name = strings.TrimSpace(name)
+	fmt.Print("Technician password (min 8 chars): ")
+	password, _ := reader.ReadString('\n')
+	password = strings.TrimSpace(password)
+	if err := CreateTechnicianAccount(currentUser.Username, name, password, currentUser.Role); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	fmt.Printf("Technician account created: %s\n", name)
 }
 
 func grantTechAccess(reader *bufio.Reader) {
@@ -732,17 +726,16 @@ func revokeUserAccess(reader *bufio.Reader) {
 }
 
 func deleteUser(reader *bufio.Reader) {
-    fmt.Print("Username to permanently delete: ")
-    username, _ := reader.ReadString('\n')
-    username = strings.TrimSpace(username)
-    err := DeleteUser(currentUser.Username, username, currentUser.Role)
-    if err != nil {
-        fmt.Printf("Error: %v\n", err)
-        return
-    }
-    fmt.Printf("User %s permanently deleted.\n", username)
+	fmt.Print("Username to permanently delete: ")
+	username, _ := reader.ReadString('\n')
+	username = strings.TrimSpace(username)
+	err := DeleteUser(currentUser.Username, username, currentUser.Role)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	fmt.Printf("User %s permanently deleted.\n", username)
 }
-
 
 func runDiagnostics() {
 	fmt.Println("\n=== RUNNING SYSTEM DIAGNOSTICS ===")
