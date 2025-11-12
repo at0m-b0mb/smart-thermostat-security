@@ -26,6 +26,7 @@ A secure-by-design smart thermostat implementation in Go with comprehensive OWAS
 - **Energy Tracking**: Usage monitoring and reporting with cost estimates
 - **Guest Management**: Temporary access with PIN-based authentication
 - **Technician Access**: Time-limited diagnostic access
+- **Geofencing/Presence Detection**: Auto-adjust HVAC based on simulated location proximity
 
 ### Security Features (OWASP Top 10 Coverage)
 
@@ -112,8 +113,9 @@ go build -o thermostat
 8. **Manage Users** - Create guests, grant technician access (homeowner only)
 9. **Run Diagnostics** - Full system health check
 10. **View Audit Logs** - Security and system event logs
-11. **Change Password** - Update user password
-12. **Logout** - End current session
+11. **Geofencing/Presence Detection** - Configure and manage location-based automation (homeowner only)
+12. **Change Password** - Update user password
+13. **Logout** - End current session
 
 ---
 
@@ -136,6 +138,7 @@ smart-thermostat-security/
 ├── energy.go            \# Energy tracking \& reporting (Dahyun)
 ├── security.go          \# Security utilities \& validation (Nina)
 ├── notifications.go     \# Alert \& notification system (Nina)
+├── geofencing.go        \# Geofencing \& presence detection
 ├── go.mod               \# Go module dependencies
 ├── thermostat.db        \# SQLite database (auto-created)
 └── README.md            \# This file
@@ -153,6 +156,9 @@ smart-thermostat-security/
 - `guest_access` - Guest and technician access grants
 - `sensor_readings` - Historical sensor data
 - `hvac_state` - HVAC operational history
+- `geofence_config` - Geofencing configuration and settings
+- `location_logs` - Historical location tracking data
+- `presence_logs` - Presence detection events and state changes
 
 ---
 
@@ -227,6 +233,59 @@ go test ./...
 
 ---
 
+## Geofencing / Presence Detection
+
+The system includes **automatic presence detection** that adjusts HVAC settings based on your simulated location.
+
+### Features
+
+- **Simulated GPS Tracking**: Uses latitude/longitude coordinates to track user location
+- **Circular Geofence**: Define home boundary with configurable radius (50-10,000 meters)
+- **Automatic HVAC Adjustment**: Different temperatures for "Home" and "Away" modes
+- **Presence History**: Complete audit trail of all presence detection events
+- **Background Monitoring**: Continuous location checking every 45 seconds
+- **Manual Control**: Simulate location changes for testing
+
+### How to Use
+
+1. **Login as Homeowner** (only homeowners can configure geofencing)
+2. **Select Menu Option 11**: Geofencing/Presence Detection
+3. **Configure Geofence**:
+   - Set home location (latitude, longitude)
+   - Define geofence radius in meters
+   - Set away mode temperature (when outside geofence)
+   - Set home mode temperature (when inside geofence)
+4. **Enable Geofencing**: Toggle the feature on/off
+5. **Simulate Movement**: Test by entering different coordinates
+
+### Example Configuration
+
+```
+Home Location: 39.2904, -76.6122 (Baltimore, MD)
+Geofence Radius: 500 meters
+Away Temperature: 18°C (energy saving)
+Home Temperature: 22°C (comfort)
+```
+
+### Security Features
+
+- **Role-based Access**: Only homeowners can configure geofencing
+- **Input Validation**: Coordinates and temperatures validated for safe ranges
+- **Audit Logging**: All presence changes and geofence configurations logged
+- **Privacy**: Location data stored locally in SQLite database
+- **Simulated Data**: No actual GPS tracking - uses simulated coordinates
+
+### Menu Options
+
+1. **Configure Geofence** - Set home location, radius, and temperature preferences
+2. **View Geofence Status** - Check current configuration and presence state
+3. **Enable/Disable Geofencing** - Toggle the feature on/off
+4. **Simulate Location Change** - Enter new coordinates to test presence detection
+5. **View Presence History** - Review recent presence detection events
+6. **Trigger Manual Presence Check** - Force immediate presence evaluation
+
+---
+
 ## Known Limitations
 
 1. **Simulated Sensors**: Current implementation uses random data generation
@@ -234,6 +293,7 @@ go test ./...
 3. **In-Memory HVAC**: Actual hardware integration needed for real deployment
 4. **CLI Only**: Web/mobile interface not included
 5. **Single Instance**: No multi-device synchronization
+6. **Simulated GPS**: Geofencing uses simulated coordinates, not real GPS data
 
 ---
 
@@ -243,7 +303,7 @@ go test ./...
 - [ ] Real sensor hardware integration
 - [ ] Cloud synchronization
 - [ ] Machine learning for temperature prediction
-- [ ] Geofencing for automatic away mode
+- [x] Geofencing for automatic away mode (✅ Implemented with simulated GPS)
 - [ ] Email/SMS notifications
 - [ ] Two-factor authentication
 - [ ] API rate limiting

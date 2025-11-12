@@ -97,10 +97,41 @@ func InitializeDatabase() error {
 		is_running INTEGER DEFAULT 0
 	);`
 
+	createGeofenceConfigTable := `CREATE TABLE IF NOT EXISTS geofence_config (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		owner TEXT UNIQUE NOT NULL,
+		home_lat REAL NOT NULL CHECK(home_lat >= -90 AND home_lat <= 90),
+		home_long REAL NOT NULL CHECK(home_long >= -180 AND home_long <= 180),
+		radius_meters REAL NOT NULL CHECK(radius_meters > 0 AND radius_meters <= 10000),
+		away_temp REAL NOT NULL CHECK(away_temp >= 10 AND away_temp <= 35),
+		home_temp REAL NOT NULL CHECK(home_temp >= 10 AND home_temp <= 35),
+		enabled INTEGER DEFAULT 1,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	createLocationLogsTable := `CREATE TABLE IF NOT EXISTS location_logs (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		latitude REAL NOT NULL CHECK(latitude >= -90 AND latitude <= 90),
+		longitude REAL NOT NULL CHECK(longitude >= -180 AND longitude <= 180),
+		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	createPresenceLogsTable := `CREATE TABLE IF NOT EXISTS presence_logs (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		owner TEXT NOT NULL,
+		is_home INTEGER NOT NULL,
+		distance_meters REAL NOT NULL,
+		latitude REAL NOT NULL,
+		longitude REAL NOT NULL,
+		timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+	);`
+
 	tables := []string{
 		createUsersTable, createLogsTable, createProfilesTable,
 		createSchedulesTable, createEnergyTable, createGuestAccessTable,
-		createSensorTable, createHVACStateTable,
+		createSensorTable, createHVACStateTable, createGeofenceConfigTable,
+		createLocationLogsTable, createPresenceLogsTable,
 	}
 
 	for _, table := range tables {
@@ -114,6 +145,9 @@ func InitializeDatabase() error {
 		"CREATE INDEX IF NOT EXISTS idx_users_session ON users(session_token)",
 		"CREATE INDEX IF NOT EXISTS idx_energy_timestamp ON energy_logs(timestamp)",
 		"CREATE INDEX IF NOT EXISTS idx_sensor_timestamp ON sensor_readings(timestamp)",
+		"CREATE INDEX IF NOT EXISTS idx_location_timestamp ON location_logs(timestamp)",
+		"CREATE INDEX IF NOT EXISTS idx_presence_timestamp ON presence_logs(timestamp)",
+		"CREATE INDEX IF NOT EXISTS idx_presence_owner ON presence_logs(owner)",
 	}
 
 	for _, index := range indices {
