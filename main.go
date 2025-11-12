@@ -38,6 +38,11 @@ func main() {
 		fmt.Printf("ERROR: HVAC initialization failed: %v\n", err)
 	}
 
+	// Initialize Geofencing
+	if err := InitializeGeofencing(); err != nil {
+		fmt.Printf("ERROR: Geofencing initialization failed: %v\n", err)
+	}
+
 	// Setup graceful shutdown
 	setupGracefulShutdown()
 
@@ -45,6 +50,7 @@ func main() {
 	go hvacControlLoop()
 	go sensorMonitorLoop()
 	go sessionCleanupLoop()
+	go GeofenceMonitorLoop()
 
 	// Main CLI loop
 	runCLI()
@@ -146,13 +152,14 @@ func displayMenu() {
         fmt.Println("6.  Manage Profiles")
     }
 
-    // Only homeowner can view audit logs
+    // Only homeowner can view audit logs and geofencing
     if currentUser.Role == "homeowner" {
         fmt.Println("10. View Audit Logs")
+        fmt.Println("11. Geofencing/Presence Detection")
     }
 
-    fmt.Println("11. Change Password")
-    fmt.Println("12. Logout")
+    fmt.Println("12. Change Password")
+    fmt.Println("13. Logout")
     fmt.Println("0.  Exit")
 }
 
@@ -208,8 +215,14 @@ func handleMenuChoice(choice string, reader *bufio.Reader) {
             fmt.Println("Invalid choice")
         }
     case "11":
-        changePasswordCLI(reader)
+        if currentUser.Role == "homeowner" {
+            manageGeofencing(reader)
+        } else {
+            fmt.Println("Invalid choice")
+        }
     case "12":
+        changePasswordCLI(reader)
+    case "13":
         logout()
     case "0":
         fmt.Println("Goodbye!")
@@ -827,6 +840,258 @@ func changePasswordCLI(reader *bufio.Reader) {
 		fmt.Println("Password changed successfully")
 	}
 }
+
+func manageGeofencing(reader *bufio.Reader) {
+	for {
+		fmt.Println("\n=== GEOFENCING / PRESENCE DETECTION ===")
+		fmt.Println("1. Configure Geofence")
+		fmt.Println("2. View Geofence Status")
+		fmt.Println("3. Enable/Disable Geofencing")
+		fmt.Println("4. Simulate Location Change")
+		fmt.Println("5. View Presence History")
+		fmt.Println("6. Trigger Manual Presence Check")
+		fmt.Println("0. Back to Main Menu")
+		fmt.Print("Enter choice: ")
+
+		choice, _ := reader.ReadString('\n')
+		choice = strings.TrimSpace(choice)
+
+		switch choice {
+		case "1":
+			configureGeofenceCLI(reader)
+		case "2":
+			viewGeofenceStatus()
+		case "3":
+			toggleGeofenceCLI(reader)
+		case "4":
+			simulateLocationCLI(reader)
+		case "5":
+			viewPresenceHistory(reader)
+		case "6":
+			triggerManualPresenceCheck()
+		case "0":
+			return
+		default:
+			fmt.Println("Invalid choice")
+		}
+	}
+}
+
+func configureGeofenceCLI(reader *bufio.Reader) {
+	fmt.Println("\n=== CONFIGURE GEOFENCE ===")
+	fmt.Println("Enter home location coordinates (latitude and longitude)")
+	
+	fmt.Print("Latitude (-90 to 90): ")
+	latStr, _ := reader.ReadString('\n')
+	lat, err := strconv.ParseFloat(strings.TrimSpace(latStr), 64)
+	if err != nil {
+		fmt.Println("Invalid latitude")
+		return
+	}
+
+	fmt.Print("Longitude (-180 to 180): ")
+	longStr, _ := reader.ReadString('\n')
+	long, err := strconv.ParseFloat(strings.TrimSpace(longStr), 64)
+	if err != nil {
+		fmt.Println("Invalid longitude")
+		return
+	}
+
+	fmt.Print("Geofence radius in meters (50-10000): ")
+	radiusStr, _ := reader.ReadString('\n')
+	radius, err := strconv.ParseFloat(strings.TrimSpace(radiusStr), 64)
+	if err != nil {
+		fmt.Println("Invalid radius")
+		return
+	}
+
+	fmt.Print("Away mode temperature (°C, 10-35): ")
+	awayTempStr, _ := reader.ReadString('\n')
+	awayTemp, err := strconv.ParseFloat(strings.TrimSpace(awayTempStr), 64)
+	if err != nil {
+		fmt.Println("Invalid temperature")
+		return
+	}
+
+	fmt.Print("Home mode temperature (°C, 10-35): ")
+	homeTempStr, _ := reader.ReadString('\n')
+	homeTemp, err := strconv.ParseFloat(strings.TrimSpace(homeTempStr), 64)
+	if err != nil {
+		fmt.Println("Invalid temperature")
+		return
+	}
+
+	if err := ConfigureGeofence(currentUser.Username, lat, long, radius, awayTemp, homeTemp, currentUser); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	
+	fmt.Println("Geofence configured successfully!")
+	fmt.Printf("Home location: %.4f, %.4f\n", lat, long)
+	fmt.Printf("Radius: %.0f meters\n", radius)
+	fmt.Printf("Away temperature: %.1f°C\n", awayTemp)
+	fmt.Printf("Home temperature: %.1f°C\n", homeTemp)
+}
+
+func viewGeofenceStatus() {
+	fmt.Println("\n=== GEOFENCE STATUS ===")
+	
+	config, err := GetGeofenceConfig(currentUser.Username, currentUser)
+	if err != nil {
+		fmt.Printf("No geofence configured: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Home Location: %.4f, %.4f\n", config.HomeLat, config.HomeLong)
+	fmt.Printf("Geofence Radius: %.0f meters\n", config.RadiusMeters)
+	fmt.Printf("Away Mode Temperature: %.1f°C\n", config.AwayModeTemp)
+	fmt.Printf("Home Mode Temperature: %.1f°C\n", config.HomeModeTemp)
+	
+	status := "Enabled"
+	if !config.Enabled {
+		status = "Disabled"
+	}
+	fmt.Printf("Status: %s\n", status)
+	fmt.Printf("Last Updated: %s\n", config.LastUpdated.Format("2006-01-02 15:04:05"))
+
+	// Show current presence status
+	presence := GetPresenceStatus()
+	fmt.Println("\n--- Current Presence ---")
+	
+	presenceStr := "Away"
+	if presence.IsHome {
+		presenceStr = "Home"
+	}
+	fmt.Printf("Presence: %s\n", presenceStr)
+	fmt.Printf("Current Location: %.4f, %.4f\n", presence.CurrentLocation.Latitude, presence.CurrentLocation.Longitude)
+	fmt.Printf("Distance from Home: %.0f meters\n", presence.DistanceFromHome)
+	fmt.Printf("Last Update: %s\n", presence.LastUpdate.Format("2006-01-02 15:04:05"))
+	fmt.Printf("Total Triggers: %d\n", presence.TriggerCount)
+}
+
+func toggleGeofenceCLI(reader *bufio.Reader) {
+	fmt.Print("Enable geofencing? (yes/no): ")
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(strings.ToLower(input))
+	
+	enabled := false
+	if input == "yes" || input == "y" {
+		enabled = true
+	}
+
+	if err := ToggleGeofence(currentUser.Username, enabled, currentUser); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+
+	status := "disabled"
+	if enabled {
+		status = "enabled"
+	}
+	fmt.Printf("Geofencing %s successfully\n", status)
+}
+
+func simulateLocationCLI(reader *bufio.Reader) {
+	fmt.Println("\n=== SIMULATE LOCATION ===")
+	fmt.Println("Enter new simulated location:")
+	
+	fmt.Print("Latitude (-90 to 90): ")
+	latStr, _ := reader.ReadString('\n')
+	lat, err := strconv.ParseFloat(strings.TrimSpace(latStr), 64)
+	if err != nil {
+		fmt.Println("Invalid latitude")
+		return
+	}
+
+	fmt.Print("Longitude (-180 to 180): ")
+	longStr, _ := reader.ReadString('\n')
+	long, err := strconv.ParseFloat(strings.TrimSpace(longStr), 64)
+	if err != nil {
+		fmt.Println("Invalid longitude")
+		return
+	}
+
+	if err := SimulateLocation(lat, long); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+
+	// Trigger immediate presence check
+	if err := CheckPresenceAndAdjustHVAC(); err != nil {
+		fmt.Printf("Warning: Presence check failed: %v\n", err)
+	}
+
+	fmt.Println("Location updated successfully!")
+	
+	// Show updated status
+	presence := GetPresenceStatus()
+	presenceStr := "Away"
+	if presence.IsHome {
+		presenceStr = "Home"
+	}
+	fmt.Printf("Current presence: %s (%.0f meters from home)\n", presenceStr, presence.DistanceFromHome)
+}
+
+func viewPresenceHistory(reader *bufio.Reader) {
+	fmt.Print("Number of recent events to show (default 10): ")
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(input)
+	
+	limit := 10
+	if input != "" {
+		if l, err := strconv.Atoi(input); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	logs, err := GetRecentPresenceLogs(currentUser.Username, limit, currentUser)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+
+	if len(logs) == 0 {
+		fmt.Println("No presence events recorded yet")
+		return
+	}
+
+	fmt.Println("\n=== PRESENCE HISTORY ===")
+	fmt.Println("Timestamp            | Status | Distance (m) | Location")
+	fmt.Println("-------------------------------------------------------------------")
+	
+	for _, log := range logs {
+		status := "Away"
+		if log.IsHome {
+			status = "Home"
+		}
+		fmt.Printf("%s | %-6s | %12.0f | %.4f, %.4f\n",
+			log.Timestamp.Format("2006-01-02 15:04:05"),
+			status,
+			log.Distance,
+			log.Latitude,
+			log.Longitude)
+	}
+}
+
+func triggerManualPresenceCheck() {
+	fmt.Println("\n=== MANUAL PRESENCE CHECK ===")
+	
+	if err := CheckPresenceAndAdjustHVAC(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+
+	presence := GetPresenceStatus()
+	presenceStr := "Away"
+	if presence.IsHome {
+		presenceStr = "Home"
+	}
+	
+	fmt.Println("Presence check completed successfully")
+	fmt.Printf("Current presence: %s\n", presenceStr)
+	fmt.Printf("Distance from home: %.0f meters\n", presence.DistanceFromHome)
+}
+
 func logout() {
 	if currentUser != nil {
 		LogoutUser(currentUser.Username)
