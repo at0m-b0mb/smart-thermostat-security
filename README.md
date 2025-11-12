@@ -327,7 +327,7 @@ go build -o thermostat
 1. Select option 8: Manage Users
 2. Select option 2: Create Technician Account
 3. Enter technician username (e.g., "hvac_tech")
-4. Enter password (minimum 4 characters)
+4. Enter password (minimum 8 characters)
 5. Select option 3: Grant/Extend Technician Access
 6. Enter technician username: hvac_tech
 7. Enter duration in hours (e.g., 24 for 24 hours)
