@@ -178,7 +178,7 @@ func logPeriodicRuntime() {
 				kwh := estimateEnergyUsage(hvacState.Mode, runtime)
 				db.Exec("INSERT INTO energy_logs (hvac_mode, runtime_minutes, estimated_kwh) VALUES (?, ?, ?)",
 					hvacState.Mode, runtime, kwh)
-				LogEvent("energy_track", fmt.Sprintf("Tracked %.2f kWh for %s mode (%d minutes)", kwh, hvacState.Mode, runtime), "system", "info")
+				//LogEvent("energy_track", fmt.Sprintf("Tracked %.2f kWh for %s mode (%d minutes)", kwh, hvacState.Mode, runtime), "system", "info")
 				// Reset startTime to track next period
 				startTime = time.Now()
 				lastEnergyLog = time.Now()
