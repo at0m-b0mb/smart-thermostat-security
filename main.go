@@ -45,6 +45,8 @@ func main() {
 	go hvacControlLoop()
 	go sensorMonitorLoop()
 	go sessionCleanupLoop()
+	go awayModeCheckLoop()
+	go maintenanceCheckLoop()
 
 	// Main CLI loop
 	runCLI()
@@ -87,6 +89,26 @@ func sessionCleanupLoop() {
 	for range ticker.C {
 		if err := CleanExpiredSessions(); err != nil {
 			LogEvent("cleanup_error", "Session cleanup failed: "+err.Error(), "system", "warning")
+		}
+	}
+}
+
+func awayModeCheckLoop() {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		if err := CheckAwayModeReturn(); err != nil {
+			LogEvent("away_mode_error", "Away mode check failed: "+err.Error(), "system", "warning")
+		}
+	}
+}
+
+func maintenanceCheckLoop() {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		if err := CheckAndUpdateMaintenance(); err != nil {
+			LogEvent("maintenance_error", "Maintenance check failed: "+err.Error(), "system", "warning")
 		}
 	}
 }
@@ -146,9 +168,12 @@ func displayMenu() {
         fmt.Println("6.  Manage Profiles")
     }
 
-    // Only homeowner can view audit logs
+    // Only homeowner can view audit logs and manage advanced features
     if currentUser.Role == "homeowner" {
         fmt.Println("10. View Audit Logs")
+        fmt.Println("13. Vacation/Away Mode")
+        fmt.Println("14. Filter Maintenance")
+        fmt.Println("15. Eco Mode Settings")
     }
 
     fmt.Println("11. Change Password")
@@ -211,6 +236,24 @@ func handleMenuChoice(choice string, reader *bufio.Reader) {
         changePasswordCLI(reader)
     case "12":
         logout()
+    case "13":
+        if currentUser.Role == "homeowner" {
+            manageAwayMode(reader)
+        } else {
+            fmt.Println("Invalid choice")
+        }
+    case "14":
+        if currentUser.Role == "homeowner" {
+            manageFilterMaintenance(reader)
+        } else {
+            fmt.Println("Invalid choice")
+        }
+    case "15":
+        if currentUser.Role == "homeowner" {
+            manageEcoMode(reader)
+        } else {
+            fmt.Println("Invalid choice")
+        }
     case "0":
         fmt.Println("Goodbye!")
         CloseDatabase()
@@ -228,7 +271,16 @@ func viewCurrentStatus() {
 	fmt.Printf("Target Temperature: %.1f°C\n", status.TargetTemp)
 	fmt.Printf("Current Temperature: %.1f°C\n", status.CurrentTemp)
 	fmt.Printf("System Running: %v\n", status.IsRunning)
+	fmt.Printf("Eco Mode: %v\n", status.EcoMode)
 	fmt.Printf("Last Update: %s\n", status.LastUpdate.Format(time.RFC3339))
+	
+	// Show away mode status if homeowner
+	if currentUser.Role == "homeowner" {
+		awayStatus, err := GetAwayModeStatus()
+		if err == nil && awayStatus != nil {
+			fmt.Printf("\nAway Mode: ACTIVE (Return: %s)\n", awayStatus.ReturnTime.Format("2006-01-02 15:04"))
+		}
+	}
 }
 
 func setTargetTemperature(reader *bufio.Reader) {
@@ -832,5 +884,179 @@ func logout() {
 		LogoutUser(currentUser.Username)
 		fmt.Printf("Goodbye, %s!\n", currentUser.Username)
 		currentUser = nil
+	}
+}
+
+func manageAwayMode(reader *bufio.Reader) {
+	for {
+		fmt.Println("\n=== VACATION/AWAY MODE ===")
+		
+		// Check current status
+		awayStatus, err := GetAwayModeStatus()
+		if err == nil && awayStatus != nil {
+			fmt.Println(DisplayAwayModeStatus(awayStatus))
+		} else {
+			fmt.Println("Away Mode: Inactive")
+		}
+		
+		fmt.Println("\n1. Activate Away Mode")
+		fmt.Println("2. Deactivate Away Mode")
+		fmt.Println("0. Back to Main Menu")
+		fmt.Print("Choice: ")
+		
+		choice, _ := reader.ReadString('\n')
+		choice = strings.TrimSpace(choice)
+		
+		switch choice {
+		case "1":
+			fmt.Print("Return date (YYYY-MM-DD): ")
+			dateStr, _ := reader.ReadString('\n')
+			dateStr = strings.TrimSpace(dateStr)
+			
+			fmt.Print("Return time (HH:MM): ")
+			timeStr, _ := reader.ReadString('\n')
+			timeStr = strings.TrimSpace(timeStr)
+			
+			returnTime, err := time.Parse("2006-01-02 15:04", dateStr+" "+timeStr)
+			if err != nil {
+				fmt.Printf("Invalid date/time format: %v\n", err)
+				continue
+			}
+			
+			fmt.Print("Away temperature (10-35°C): ")
+			tempStr, _ := reader.ReadString('\n')
+			tempStr = strings.TrimSpace(tempStr)
+			awayTemp, err := strconv.ParseFloat(tempStr, 64)
+			if err != nil {
+				fmt.Println("Invalid temperature")
+				continue
+			}
+			
+			err = SetAwayMode(returnTime, awayTemp, currentUser)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			} else {
+				fmt.Println("Away mode activated successfully!")
+			}
+			
+		case "2":
+			err := DeactivateAwayMode(currentUser)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			} else {
+				fmt.Println("Away mode deactivated. Settings restored.")
+			}
+			
+		case "0":
+			return
+			
+		default:
+			fmt.Println("Invalid choice")
+		}
+	}
+}
+
+func manageFilterMaintenance(reader *bufio.Reader) {
+	for {
+		fmt.Println("\n=== FILTER MAINTENANCE ===")
+		
+		// Display current maintenance status
+		status, err := GetMaintenanceStatus()
+		if err != nil {
+			fmt.Printf("Error getting maintenance status: %v\n", err)
+		} else {
+			fmt.Println(DisplayMaintenanceStatus(status))
+		}
+		
+		fmt.Println("\n1. Reset Filter (After Replacement)")
+		fmt.Println("2. Set Filter Change Interval")
+		fmt.Println("0. Back to Main Menu")
+		fmt.Print("Choice: ")
+		
+		choice, _ := reader.ReadString('\n')
+		choice = strings.TrimSpace(choice)
+		
+		switch choice {
+		case "1":
+			err := ResetFilter(currentUser)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			} else {
+				fmt.Println("Filter maintenance reset successfully!")
+			}
+			
+		case "2":
+			fmt.Print("Filter change interval (hours, 100-2000): ")
+			hoursStr, _ := reader.ReadString('\n')
+			hoursStr = strings.TrimSpace(hoursStr)
+			hours, err := strconv.ParseFloat(hoursStr, 64)
+			if err != nil {
+				fmt.Println("Invalid number")
+				continue
+			}
+			
+			err = SetFilterChangeInterval(hours, currentUser)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			} else {
+				fmt.Printf("Filter change interval set to %.0f hours\n", hours)
+			}
+			
+		case "0":
+			return
+			
+		default:
+			fmt.Println("Invalid choice")
+		}
+	}
+}
+
+func manageEcoMode(reader *bufio.Reader) {
+	for {
+		fmt.Println("\n=== ECO MODE SETTINGS ===")
+		
+		// Display current eco mode status
+		isEco, _ := GetEcoModeStatus()
+		fmt.Println(DisplayEcoModeStatus())
+		
+		fmt.Println("\n1. Enable Eco Mode")
+		fmt.Println("2. Disable Eco Mode")
+		fmt.Println("0. Back to Main Menu")
+		fmt.Print("Choice: ")
+		
+		choice, _ := reader.ReadString('\n')
+		choice = strings.TrimSpace(choice)
+		
+		switch choice {
+		case "1":
+			if isEco {
+				fmt.Println("Eco mode is already enabled")
+			} else {
+				err := SetEcoMode(true, currentUser)
+				if err != nil {
+					fmt.Printf("Error: %v\n", err)
+				} else {
+					fmt.Println("Eco mode enabled! System will optimize for energy savings.")
+				}
+			}
+			
+		case "2":
+			if !isEco {
+				fmt.Println("Eco mode is already disabled")
+			} else {
+				err := SetEcoMode(false, currentUser)
+				if err != nil {
+					fmt.Printf("Error: %v\n", err)
+				} else {
+					fmt.Println("Eco mode disabled. Returning to standard operation.")
+				}
+			}
+			
+		case "0":
+			return
+			
+		default:
+			fmt.Println("Invalid choice")
+		}
 	}
 }
