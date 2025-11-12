@@ -126,6 +126,19 @@ func InitializeDatabase() error {
 		return err
 	}
 
+	// Initialize new feature tables
+	if err = InitializeAwayModeTable(); err != nil {
+		return fmt.Errorf("failed to initialize away mode: %w", err)
+	}
+
+	if err = InitializeMaintenanceTable(); err != nil {
+		return fmt.Errorf("failed to initialize maintenance: %w", err)
+	}
+
+	if err = InitializeGeofencingTable(); err != nil {
+		return fmt.Errorf("failed to initialize geofencing: %w", err)
+	}
+
 	LogEvent("system", "Database initialized", "system", "info")
 	return nil
 }
