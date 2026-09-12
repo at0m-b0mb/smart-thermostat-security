@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/subtle"
 	"errors"
 	"html"
 	"regexp"
@@ -103,15 +104,13 @@ func ValidateAndSanitizeUsername(username string) (string, error) {
 	return username, nil
 }
 
+// SecureCompare reports whether a and b are equal, taking time independent of
+// their contents. Backed by crypto/subtle rather than a hand-rolled loop: the
+// compiler is free to optimise a handwritten XOR-accumulate into an early
+// exit, which would reintroduce the timing signal this function exists to
+// remove.
 func SecureCompare(a, b string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	result := 0
-	for i := 0; i < len(a); i++ {
-		result |= int(a[i]) ^ int(b[i])
-	}
-	return result == 0
+	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }
 
 func AuditSecurityEvent(eventType, details, username string) {
