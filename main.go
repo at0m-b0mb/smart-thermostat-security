@@ -21,6 +21,10 @@ func main() {
 	fmt.Println("==============================================")
 	fmt.Println()
 
+	// Remember the tty mode so a signal-driven exit cannot leave the user's
+	// shell with echo disabled after a masked prompt.
+	saveTerminalState()
+
 	// Initialize database
 	if err := InitializeDatabase(); err != nil {
 		fmt.Printf("FATAL: Database initialization failed: %v\n", err)
@@ -55,6 +59,7 @@ func setupGracefulShutdown() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
+		restoreTerminalState()
 		fmt.Println("\n\nShutting down gracefully...")
 		CloseDatabase()
 		os.Exit(0)
@@ -101,9 +106,11 @@ func runCLI() {
 			username, _ := reader.ReadString('\n')
 			username = strings.TrimSpace(username)
 
-			fmt.Print("Password: ")
-			password, _ := reader.ReadString('\n')
-			password = strings.TrimSpace(password)
+			password, err := ReadSecret(reader, "Password: ")
+			if err != nil {
+				fmt.Printf("Input error: %v\n", err)
+				continue
+			}
 
 			user, err := AuthenticateUser(username, password)
 			if err != nil {
@@ -533,11 +540,13 @@ func manageUsers(reader *bufio.Reader) {
 			guestName, _ := reader.ReadString('\n')
 			guestName = strings.TrimSpace(guestName)
 
-			fmt.Print("PIN (minimum 4 digits): ")
-			pin, _ := reader.ReadString('\n')
-			pin = strings.TrimSpace(pin)
+			pin, err := ReadSecret(reader, "PIN (minimum 4 digits): ")
+			if err != nil {
+				fmt.Printf("Input error: %v\n", err)
+				continue
+			}
 
-			err := CreateGuestAccount(currentUser.Username, guestName, pin, currentUser.Role)
+			err = CreateGuestAccount(currentUser.Username, guestName, pin, currentUser.Role)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 			} else {
@@ -555,11 +564,13 @@ func manageUsers(reader *bufio.Reader) {
 			techName, _ := reader.ReadString('\n')
 			techName = strings.TrimSpace(techName)
 
-			fmt.Print("Password (minimum 4 characters): ")
-			password, _ := reader.ReadString('\n')
-			password = strings.TrimSpace(password)
+			password, err := ReadSecret(reader, "Password (min 8 chars, upper+lower+digit): ")
+			if err != nil {
+				fmt.Printf("Input error: %v\n", err)
+				continue
+			}
 
-			err := CreateTechnicianAccount(currentUser.Username, techName, password, currentUser.Role)
+			err = CreateTechnicianAccount(currentUser.Username, techName, password, currentUser.Role)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 			} else {
@@ -668,9 +679,11 @@ func createGuest(reader *bufio.Reader) {
 	name, _ := reader.ReadString('\n')
 	name = strings.TrimSpace(name)
 
-	fmt.Print("Guest PIN (min 4): ")
-	pin, _ := reader.ReadString('\n')
-	pin = strings.TrimSpace(pin)
+	pin, err := ReadSecret(reader, "Guest PIN (min 4 digits): ")
+	if err != nil {
+		fmt.Printf("Input error: %v\n", err)
+		return
+	}
 
 	if err := CreateGuestAccount(currentUser.Username, name, pin, currentUser.Role); err != nil {
 		fmt.Printf("Error: %v\n", err)
@@ -683,9 +696,11 @@ func createTechnician(reader *bufio.Reader) {
 	fmt.Print("Technician name: ")
 	name, _ := reader.ReadString('\n')
 	name = strings.TrimSpace(name)
-	fmt.Print("Technician password (min 8 chars): ")
-	password, _ := reader.ReadString('\n')
-	password = strings.TrimSpace(password)
+	password, err := ReadSecret(reader, "Technician password (min 8 chars, upper+lower+digit): ")
+	if err != nil {
+		fmt.Printf("Input error: %v\n", err)
+		return
+	}
 	if err := CreateTechnicianAccount(currentUser.Username, name, password, currentUser.Role); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -772,20 +787,16 @@ func changePasswordCLI(reader *bufio.Reader) {
 	// Check if user is a guest - they use PINs, not passwords
 	if currentUser.Role == "guest" {
 		// Guest PIN change flow
-		fmt.Print("Current PIN: ")
-		oldPIN, _ := reader.ReadString('\n')
-		oldPIN = strings.TrimSpace(oldPIN)
+		oldPIN, err := ReadSecret(reader, "Current PIN: ")
+		if err != nil {
+			fmt.Printf("Input error: %v\n", err)
+			return
+		}
 
-		fmt.Print("New PIN (numeric, min 4 digits): ")
-		newPIN, _ := reader.ReadString('\n')
-		newPIN = strings.TrimSpace(newPIN)
-
-		fmt.Print("Confirm new PIN: ")
-		confirmPIN, _ := reader.ReadString('\n')
-		confirmPIN = strings.TrimSpace(confirmPIN)
-
-		if newPIN != confirmPIN {
-			fmt.Println("PINs do not match")
+		newPIN, err := ReadSecretConfirmed(reader,
+			"New PIN (numeric, min 4 digits): ", "Confirm new PIN: ")
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
 			return
 		}
 
@@ -796,20 +807,16 @@ func changePasswordCLI(reader *bufio.Reader) {
 		fmt.Println("PIN changed successfully")
 	} else {
 		// Homeowner/Technician password change flow
-		fmt.Print("Current password: ")
-		oldPass, _ := reader.ReadString('\n')
-		oldPass = strings.TrimSpace(oldPass)
+		oldPass, err := ReadSecret(reader, "Current password: ")
+		if err != nil {
+			fmt.Printf("Input error: %v\n", err)
+			return
+		}
 
-		fmt.Print("New password: ")
-		newPass, _ := reader.ReadString('\n')
-		newPass = strings.TrimSpace(newPass)
-
-		fmt.Print("Confirm new password: ")
-		confirmPass, _ := reader.ReadString('\n')
-		confirmPass = strings.TrimSpace(confirmPass)
-
-		if newPass != confirmPass {
-			fmt.Println("Passwords do not match")
+		newPass, err := ReadSecretConfirmed(reader,
+			"New password (min 8 chars, upper+lower+digit): ", "Confirm new password: ")
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
 			return
 		}
 
